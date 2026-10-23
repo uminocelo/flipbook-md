@@ -1,49 +1,58 @@
 # Flipbook MD
 
-**Markdown in. Slides out.** Flipbook MD is a small local-first CLI that serves a Markdown presentation in your browser.
+**Markdown in. Slides out.**
 
-The core workflow is:
+Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser. The same source can be exported as numbered PNG images for an Instagram carousel or an X multi-image post.
+
+Requires [Node.js](https://nodejs.org/) 20 or newer.
+
+## Quick start
+
+Install dependencies and open the sample talk:
 
 ```sh
-flipbook show .
+npm install
+npm start
 ```
 
-Flipbook finds a supported presentation in the current directory, starts a local HTTP server on an available port, and prints the URL. It tries to open the URL in your default browser; if that isn't possible, open the printed URL yourself.
+`npm start` serves `examples/database-indexes-project` and prints a `http://127.0.0.1` URL. Flipbook tries to open that URL in your default browser. If it cannot, open the printed URL yourself. Press Ctrl+C to stop the server.
 
-## Requirements
-
-- Node.js 20 or newer
-- npm
-
-## Install and run locally
-
-From this repository:
+To use the `flipbook` command from any directory:
 
 ```sh
 npm install
 npm link
-cd examples/database-indexes-project
-flipbook show .
+flipbook show examples/database-indexes-project
 ```
 
-Or without linking the command globally:
+Without a global link, run the entry point directly:
 
 ```sh
-npm install
-npm run start
+node bin/flipbook.js show .
 ```
 
-To use the CLI without `npm link`:
+## Commands
 
-```sh
-node /path/to/flipbook-md/bin/flipbook.js show .
-```
+| Command | What it does |
+| --- | --- |
+| `flipbook show [path]` | Serves the presentation on `127.0.0.1` and opens it in a browser. |
+| `flipbook export [path]` | Writes one PNG per slide. |
+| `flipbook --help` | Prints usage. |
 
-## Supported source formats
+Omit `path` to use the current directory. Both `show` and `export` accept:
 
-### 1. Single-file presentation
+- a `*.slide.md` file
+- a directory that contains a `*.slide.md` file
+- a directory that contains `presentation.yml`
+- a path to `presentation.yml`
 
-Create `intro.slide.md`:
+A directory with no manifest uses the first `*.slide.md` file in that directory, in sorted name order. Subdirectories are not searched.
+
+## Write a presentation
+
+### Single file
+
+Name the file with a `.slide.md` suffix. YAML frontmatter is optional and sets the title and theme. A line that contains only `---` separates slides. The first separator is the `---` after the frontmatter.
 
 ```markdown
 ---
@@ -60,20 +69,16 @@ Markdown becomes a slide.
 # Second slide
 
 - Write familiar Markdown
-- Separate slides with a line containing `---`
+- Separate slides with a line containing only `---`
 ```
-
-Then run:
 
 ```sh
 flipbook show intro.slide.md
 ```
 
-The YAML frontmatter is optional. The first slide separator is the line `---` after the frontmatter.
+### Directory
 
-### 2. Directory-based presentation
-
-A directory project has a `presentation.yml` manifest and one Markdown file per slide:
+Use one Markdown file per slide and list those files in `presentation.yml`.
 
 ```text
 my-talk/
@@ -83,8 +88,6 @@ my-talk/
     └── 02-next.md
 ```
 
-`presentation.yml`:
-
 ```yaml
 title: "My presentation"
 theme: "midnight"
@@ -93,89 +96,90 @@ slides:
   - slides/02-next.md
 ```
 
-Run:
-
 ```sh
 flipbook show ./my-talk
 ```
 
-Slide paths must stay inside the presentation directory. Flipbook rejects manifest paths that escape the project directory.
+Each slide path must stay inside the presentation directory. Flipbook rejects a manifest path that escapes the project, including a path that resolves outside it through a symlink.
 
-## What `flipbook show <path>` does
+### Themes
 
-- A `.slide.md` path loads that single-file presentation.
-- A directory containing `presentation.yml` loads the listed slide files.
-- A directory without a manifest searches for the first `*.slide.md` file in that directory.
-- If the path is omitted, `.` is used.
-- The server binds to `127.0.0.1` and asks the operating system for an available port (port `0`), rather than assuming a port is free.
-- Press **← / →** or **Space** to navigate, **Home / End** to jump, and **F** to toggle fullscreen.
-- Press **Esc** to leave fullscreen (browser behavior).
+`theme` may be `midnight` (the default), `light`, `paper`, or `forest`. Image export uses that palette. Any other value falls back to `midnight`. The browser player uses its built-in dark appearance.
 
-## Current scope
+## Present
 
-This is an initial MVP: local presentation discovery, Markdown rendering, a responsive slide player, and basic tests. It does not yet include live reload, a visual editor, PPTX export, collaboration, or automatic parsing of every possible Markdown extension. The `theme` field is metadata for future themes; the first version uses the built-in midnight theme.
+The server binds to `127.0.0.1` and lets the operating system choose a free port.
 
-## Development
+| Key | Action |
+| --- | --- |
+| → or Space | Next slide |
+| ← | Previous slide |
+| Home / End | First or last slide |
+| F | Toggle fullscreen |
+| Esc | Leave fullscreen |
+
+The on-screen buttons perform the same navigation.
+
+## Export carousel images
+
+Export renders each slide with [Playwright](https://playwright.dev/) and Chromium. Install that browser once, after the project dependencies:
 
 ```sh
-npm test
-npm run start
-```
-
-Project structure:
-
-```text
-bin/       CLI entry point
-src/       discovery, parsing, HTTP server, browser launch
-public/    browser player
-examples/  sample presentations
-test/      automated tests
-```
-
-## Security notes
-
-Flipbook is designed for local authoring. The server listens on loopback only. Rendered Markdown is sanitized before being sent to the browser, and directory manifest slide paths are checked to prevent traversal outside the project. Do not expose this development server to an untrusted network.
-
-## License
-
-MIT
-
-
-## Export slides as social carousel images
-
-Flipbook MD can export each slide as a separate, ready-to-upload PNG image.
-
-### Install the browser used for image rendering
-
-After installing project dependencies, install Playwright's Chromium browser once:
-
-```bash
 npm install
 npx playwright install chromium
 ```
 
-### Export
-
-```bash
-# Instagram-friendly portrait images (1080 × 1350, 4:5)
+```sh
+# Instagram portrait, 1080 × 1350 (4:5)
 flipbook export examples/system-design.slide.md --format carousel --preset instagram
 
-# Square images for X multi-image posts (1080 × 1080, 1:1)
+# Square images for X, 1080 × 1080 (1:1)
 flipbook export examples/system-design.slide.md --format carousel --preset x
 
 # Choose the output folder
 flipbook export . --format carousel --preset instagram --output dist/instagram
 ```
 
-`flipbook export` accepts the same inputs as `flipbook show`: a `.slide.md` file, a directory containing a `.slide.md` file, a directory project with `presentation.yml`, or a path to `presentation.yml`.
-
-Each slide is rendered as a numbered PNG, using the presentation theme and slide content. A `README.txt` is also written to the output folder. Upload the images in numeric order. Platform publishing features and limits can change, so check the current rules before posting.
-
-### Export presets
-
-| Preset | Dimensions | Shape | Intended use |
+| Preset | Size | Shape | Intended use |
 | --- | ---: | --- | --- |
 | `instagram` | 1080 × 1350 | 4:5 portrait | Instagram carousel |
 | `x` | 1080 × 1080 | 1:1 square | X multi-image post |
 
-The browser-based presenter remains available via `flipbook show .`. Image export is a separate command and does not alter the source Markdown.
+`--format` accepts `carousel`. The default preset is `instagram`, and the default output directory is `dist/carousel`.
+
+Each file is named in slide order, for example `01-hello-world.png`. The folder also contains `README.txt`. Upload the images in numeric order, and check the platform’s current size and cropping rules before posting. Export leaves the source Markdown unchanged.
+
+`npm run export:instagram` exports `examples/system-design.slide.md` with the Instagram preset.
+
+## Development
+
+```sh
+npm test
+npm start
+```
+
+Tests use the Node.js test runner (`node --test`).
+
+```text
+bin/        CLI entry point
+src/        discovery, Markdown rendering, HTTP server, image export
+public/     browser player
+examples/   sample presentations
+test/       automated tests
+```
+
+`node_modules/` and generated files under `dist/` are gitignored.
+
+## Security
+
+Flipbook is for local authoring. The server listens on loopback only. Rendered Markdown is sanitized before it is sent to the browser, and manifest slide paths cannot leave the presentation directory. Keep this server off untrusted networks.
+
+## Status
+
+Version 0.1.0 includes presentation discovery, Markdown slides, a browser player, carousel PNG export, and tests.
+
+This version does not include live reload, a visual editor, PowerPoint export, collaboration, or support for every Markdown extension.
+
+## License
+
+[MIT](LICENSE)
