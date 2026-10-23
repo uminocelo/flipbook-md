@@ -14,7 +14,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "start": "node ./bin/flipbook.js show ./examples/database-indexes",
+    "start": "node ./bin/flipbook.js show ./examples/database-indexes-project",
     "test": "node --test",
     "export:instagram": "node ./bin/flipbook.js export ./examples/system-design.slide.md --preset instagram"
   },

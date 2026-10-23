@@ -2,9 +2,7 @@
 title: "Database Indexes"
 theme: "midnight"
 ---
-
 <!-- eyebrow: DATABASE FUNDAMENTALS -->
-
 # Database Indexes
 
 Make reads faster by organizing how the database finds rows.
@@ -16,6 +14,7 @@ Make reads faster by organizing how the database finds rows.
 
 ---
 
+<!-- eyebrow: THE PROBLEM -->
 # Imagine a book without an index
 
 Finding one topic means scanning every page until you find it.
@@ -28,6 +27,7 @@ Finding one topic means scanning every page until you find it.
 
 ---
 
+<!-- eyebrow: ANATOMY -->
 # What an index stores
 
 Usually, indexed values plus a way to locate the matching row.
@@ -36,60 +36,60 @@ Usually, indexed values plus a way to locate the matching row.
 - A row locator or primary-key value.
 - An ordering or structure that makes lookup efficient.
 
-> **Flow:** email → index entry → row location → table row
+> **Remember:** Each index entry maps a key to the location of its row.
 
 ---
 
+<!-- eyebrow: THE PAYOFF -->
 # Without an index vs. with an index
 
 Suppose a users table has one million rows.
 
-## No useful index
-
+### No useful index
 - Read many or all rows
 - Check each email value
 - Work grows with table size
 
-## Useful index
-
+### Useful index
 - Navigate the index
 - Find matching key(s)
 - Fetch only relevant row(s)
 
-> **Remember:** A lookup can often move from roughly O(n) scanning toward O(log n) navigation, depending on the index and query.
+> **Remember:** A lookup can often move from roughly O(n) scanning toward O(log n) navigation.
 
 ---
 
+<!-- eyebrow: DATA STRUCTURES -->
 # B-tree: the everyday workhorse
 
 Balanced trees keep keys ordered and searches shallow.
 
-- Good for equality and range conditions.
-- Can support sorting and ordered traversal.
-- Common default for general-purpose relational indexes.
-
 > **Flow:** Root → internal pages → leaf pages → row references
+
+> **Remember:** B-trees serve equality, range conditions, and ordered reads, so they are the common default.
 
 ---
 
+<!-- eyebrow: TRADE-OFFS -->
 # Indexes are not free
 
-## Benefits
+Every index speeds some reads and slows every write.
 
+### Benefits
 - Faster selective reads
 - Can help ORDER BY / JOIN
 - Can enforce uniqueness
 
-## Costs
-
+### Costs
 - Extra disk and memory
 - INSERT / UPDATE / DELETE maintenance
 - Too many indexes can slow writes
 
-> **Remember:** Add indexes to serve real query patterns—not simply because a column exists.
+> **Remember:** Add indexes to serve real query patterns, not simply because a column exists.
 
 ---
 
+<!-- eyebrow: IN PRACTICE -->
 # Choose the right columns
 
 Start from the WHERE, JOIN, and ORDER BY clauses you actually use.
@@ -103,12 +103,11 @@ FROM users
 WHERE email = 'ada@example.com';
 ```
 
-- High-selectivity columns are often good candidates.
-- Composite index order matters.
-- Use EXPLAIN / EXPLAIN ANALYZE to inspect the query plan.
+> **Remember:** Use EXPLAIN to confirm the query plan actually uses the index.
 
 ---
 
+<!-- eyebrow: TAKEAWAYS -->
 # A practical checklist
 
 Make index choices measurable.
@@ -118,5 +117,3 @@ Make index choices measurable.
 - Inspect the query plan before and after.
 - Measure write latency and index size too.
 - Revisit indexes as workloads change.
-
-> **Remember:** The best index improves your workload without imposing unnecessary cost.

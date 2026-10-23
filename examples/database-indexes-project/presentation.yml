@@ -1,6 +1,11 @@
 title: "Database Indexes"
 theme: "midnight"
 slides:
-  - slides/01-intro.md
-  - slides/02-book-index.md
-  - slides/03-index-structure.md
+  - "slides/01-intro.md"
+  - "slides/02-book-index.md"
+  - "slides/03-index-structure.md"
+  - "slides/04-with-vs-without.md"
+  - "slides/05-b-tree.md"
+  - "slides/06-costs.md"
+  - "slides/07-choose-columns.md"
+  - "slides/08-checklist.md"

@@ -22,7 +22,7 @@ From this repository:
 ```sh
 npm install
 npm link
-cd examples/database-indexes
+cd examples/database-indexes-project
 flipbook show .
 ```
 

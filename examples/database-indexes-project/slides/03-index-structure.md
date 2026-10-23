@@ -1,9 +1,10 @@
-# B-tree: the everyday workhorse
+<!-- eyebrow: ANATOMY -->
+# What an index stores
 
-Balanced trees keep keys ordered and searches shallow.
+Usually, indexed values plus a way to locate the matching row.
 
-- Good for equality and range conditions.
-- Can support sorting and ordered traversal.
-- Common default for general-purpose relational indexes.
+- The indexed key (for example, email).
+- A row locator or primary-key value.
+- An ordering or structure that makes lookup efficient.
 
-> Root → internal pages → leaf pages → row references
+> **Remember:** Each index entry maps a key to the location of its row.

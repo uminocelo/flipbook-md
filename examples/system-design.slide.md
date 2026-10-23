@@ -2,7 +2,7 @@
 title: "System Design"
 theme: "midnight"
 ---
-
+<!-- eyebrow: ARCHITECTURE -->
 # System Design
 
 A practical framework for designing services that scale and survive failure.
@@ -14,26 +14,26 @@ A practical framework for designing services that scale and survive failure.
 
 ---
 
+<!-- eyebrow: REQUIREMENTS -->
 # Start with requirements
 
 Do not choose a database or cache before understanding the job.
 
-## Functional
-
+### Functional
 - What can users do?
 - What data is created or read?
 - Which workflows matter most?
 
-## Non-functional
-
+### Non-functional
 - Latency and throughput
 - Availability and durability
 - Security, privacy, and cost
 
-> A design is only good relative to explicit requirements and constraints.
+> **Remember:** A design is only good relative to explicit requirements and constraints.
 
 ---
 
+<!-- eyebrow: CAPACITY -->
 # Estimate the workload
 
 Back-of-the-envelope math reveals the shape of the problem.
@@ -43,25 +43,25 @@ Back-of-the-envelope math reveals the shape of the problem.
 - Peak traffic can be several times the average.
 - Estimate data growth, payload size, and read/write ratio.
 
-> **Flow:** Users → requests/sec → CPU, network, storage, and capacity
+> **Remember:** Turn users into requests per second, then into CPU, network, and storage.
 
 ---
 
+<!-- eyebrow: REQUEST PATH -->
 # Draw the request path
 
 Make every hop visible before adding complexity.
 
 > **Flow:** Client → API / Load Balancer → Application → Database
 
-- Add a cache only where it improves a measured access pattern.
-- Use a queue when work can be asynchronous.
-- Keep authentication, authorization, and validation explicit.
+> **Remember:** Add a cache or a queue only where a measured access pattern justifies it.
 
 ---
 
+<!-- eyebrow: DATA AND APIS -->
 # Model the data and APIs
 
-The access patterns should shape the model—not the other way around.
+The access patterns should shape the model, not the other way around.
 
 - Define resources and stable API contracts.
 - Identify ownership of each piece of data.
@@ -71,24 +71,26 @@ The access patterns should shape the model—not the other way around.
 
 ---
 
+<!-- eyebrow: SCALING -->
 # Scale reads and writes deliberately
 
-## Read strategies
+Pick a strategy for the bottleneck you measured.
 
+### Read strategies
 - Cache hot, safe-to-cache data
 - Use replicas when consistency permits
 - Paginate and optimize query plans
 
-## Write strategies
-
+### Write strategies
 - Batch work where appropriate
 - Partition only when needed
 - Use queues for slow side effects
 
-> A cache is not a substitute for a correct data model or a measured bottleneck.
+> **Remember:** A cache is not a substitute for a correct data model or a measured bottleneck.
 
 ---
 
+<!-- eyebrow: RESILIENCE -->
 # Design for failure
 
 Assume dependencies will be slow, unavailable, or return unexpected results.
@@ -99,30 +101,30 @@ Assume dependencies will be slow, unavailable, or return unexpected results.
 - Apply rate limits and bounded queues.
 - Add health checks, metrics, logs, traces, and alerts.
 
-> **Flow:** Detect → contain → recover → learn
+> **Remember:** Detect, contain, recover, and learn from every failure.
 
 ---
 
+<!-- eyebrow: TRADE-OFFS -->
 # Make trade-offs explicit
 
 System design is rarely about finding one universally perfect answer.
 
-## Consistency
-
+### Consistency
 - Strong consistency
 - Eventual consistency
 - Read-your-writes expectations
 
-## Architecture
-
+### Architecture
 - Simple monolith first
 - Modular boundaries
 - Extract services when pressure justifies it
 
-> Prefer the simplest design that meets today's requirements and leaves a credible path forward.
+> **Remember:** Prefer the simplest design that meets today's requirements and leaves a credible path forward.
 
 ---
 
+<!-- eyebrow: TAKEAWAYS -->
 # A reusable design checklist
 
 Walk through this list in a design review.
@@ -131,5 +133,4 @@ Walk through this list in a design review.
 - Traffic and storage estimates are written down.
 - APIs, data ownership, and consistency are defined.
 - Bottlenecks and failure modes have mitigations.
-- Security and observability are part of the design.
-- Trade-offs and open questions are documented.
+- Security, observability, and trade-offs are documented.
