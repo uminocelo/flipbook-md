@@ -8,21 +8,35 @@ Flipbook MD is a local command-line tool. Point it at a Markdown presentation an
 
 Requires [Node.js](https://nodejs.org/) 20 or newer.
 
-## Quick start
+## Install
 
-Install dependencies and open the sample talk:
+```sh
+npm install -g flipbook-md
+flipbook show .
+```
+
+`flipbook show` serves a presentation in the current directory. [Write a presentation](#write-a-presentation) describes the file format. Flipbook prints a `http://127.0.0.1` URL and tries to open it in your default browser. If it cannot, open the printed URL yourself. Press Ctrl+C to stop the server.
+
+Exporting PNG images needs Chromium, installed once:
+
+```sh
+npx playwright install chromium
+```
+
+## Quick start from a checkout
+
+Clone this repository, install dependencies, and open the sample talk:
 
 ```sh
 npm install
 npm start
 ```
 
-`npm start` serves `examples/database-indexes-project` and prints a `http://127.0.0.1` URL. Flipbook tries to open that URL in your default browser. If it cannot, open the printed URL yourself. Press Ctrl+C to stop the server.
+`npm start` serves `examples/database-indexes-project` on a local URL, the same way `flipbook show` does.
 
-To use the `flipbook` command from any directory:
+To use the `flipbook` command from any directory while you work on this repository:
 
 ```sh
-npm install
 npm link
 flipbook show examples/database-indexes-project
 ```

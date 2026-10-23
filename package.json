@@ -2,6 +2,23 @@
   "name": "flipbook-md",
   "version": "0.1.0",
   "description": "Turn Markdown files into browser-based slide presentations and social carousel images.",
+  "keywords": [
+    "cli",
+    "markdown",
+    "slides",
+    "presentation",
+    "carousel"
+  ],
+  "homepage": "https://github.com/uminocelo/flipbook-md",
+  "bugs": {
+    "url": "https://github.com/uminocelo/flipbook-md/issues"
+  },
+  "license": "MIT",
+  "author": "Celo (https://github.com/uminocelo)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uminocelo/flipbook-md.git"
+  },
   "type": "module",
   "bin": {
     "flipbook": "./bin/flipbook.js"
