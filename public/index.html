@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Flipbook MD</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Flipbook MD home">FLIPBOOK <span>MD</span></a>
+    <div class="topbar-right"><span id="deck-title">Loading presentation…</span><button id="fullscreen" class="icon-button" title="Toggle fullscreen (F)" aria-label="Toggle fullscreen">⛶</button></div>
+  </header>
+  <main>
+    <section id="slide" class="slide" aria-live="polite" aria-label="Current slide">
+      <p class="loading">Loading your slides…</p>
+    </section>
+    <nav class="controls" aria-label="Slide navigation">
+      <button id="previous" class="nav-button" aria-label="Previous slide">← <span>Previous</span></button>
+      <div class="slide-meta"><span id="counter">— / —</span><div class="progress"><div id="progress-bar"></div></div></div>
+      <button id="next" class="nav-button primary" aria-label="Next slide"><span>Next</span> →</button>
+    </nav>
+  </main>
+  <footer><span>Made with <strong>Flipbook MD</strong></span><span>← / → navigate · F fullscreen · Home / End jump</span></footer>
+</body>
+</html>

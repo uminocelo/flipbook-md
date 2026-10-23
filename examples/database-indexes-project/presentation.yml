@@ -1,0 +1,6 @@
+title: "Database Indexes"
+theme: "midnight"
+slides:
+  - slides/01-intro.md
+  - slides/02-book-index.md
+  - slides/03-index-structure.md

@@ -1,0 +1,32 @@
+{
+  "name": "flipbook-md",
+  "version": "0.1.0",
+  "description": "Turn Markdown files into browser-based slide presentations and social carousel images.",
+  "type": "module",
+  "bin": {
+    "flipbook": "./bin/flipbook.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "public/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node ./bin/flipbook.js show ./examples/database-indexes",
+    "test": "node --test",
+    "export:instagram": "node ./bin/flipbook.js export ./examples/system-design.slide.md --preset instagram"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "marked": "^15.0.7",
+    "sanitize-html": "^2.14.0",
+    "yaml": "^2.7.0",
+    "playwright": "^1.55.0"
+  },
+  "devDependencies": {}
+}
