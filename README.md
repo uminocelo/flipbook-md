@@ -1,5 +1,7 @@
 # Flipbook MD
 
+[![CI](https://github.com/uminocelo/flipbook-md/actions/workflows/ci.yml/badge.svg)](https://github.com/uminocelo/flipbook-md/actions/workflows/ci.yml)
+
 **Markdown in. Slides out.**
 
 Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser. The same source can be exported as numbered PNG images for an Instagram carousel or an X multi-image post.
