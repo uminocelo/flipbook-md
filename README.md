@@ -6,6 +6,10 @@
 
 Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser. The same source can be exported as numbered PNG images for an Instagram carousel or an X multi-image post.
 
+![Flipbook player showing the database indexes example](docs/screenshots/player.png)
+
+The shot above is `examples/database-indexes-project` in the browser player.
+
 Requires [Node.js](https://nodejs.org/) 20 or newer.
 
 ## Install
@@ -99,17 +103,22 @@ Use one Markdown file per slide and list those files in `presentation.yml`.
 ```text
 my-talk/
 ├── presentation.yml
+├── presentation.css
+├── assets/
+│   └── diagram.png
 └── slides/
-    ├── 01-intro.md
-    └── 02-next.md
+    ├── 01-intro.slide.md
+    └── 02-next.slide.md
 ```
+
+`presentation.css` and `assets/` are optional. Slides use the built-in palette when the stylesheet is absent. A manifest may list any Markdown file inside the deck; `slides/NN-name.slide.md` is the convention. Existing decks that list `slides/01-intro.md` keep working.
 
 ```yaml
 title: "My presentation"
 theme: "midnight"
 slides:
-  - slides/01-intro.md
-  - slides/02-next.md
+  - slides/01-intro.slide.md
+  - slides/02-next.slide.md
 ```
 
 ```sh
@@ -118,9 +127,62 @@ flipbook show ./my-talk
 
 Each slide path must stay inside the presentation directory. Flipbook rejects a manifest path that escapes the project, including a path that resolves outside it through a symlink.
 
+The same directory can also hold one `<name>.slide.md` with every slide in a single file. `flipbook show` on the directory uses `presentation.yml` when that file is present.
+
+### Images and other files
+
+Put images, PDF, audio, and video in `assets/` at the deck root. In a slide, path them from that root:
+
+```markdown
+![Query plan](assets/diagram.png)
+
+[Handout](assets/handout.pdf)
+```
+
+A path that starts with `./` is read next to that slide file. `https://` URLs stay as written. Flipbook serves these files with the deck and embeds images in exported PNGs. A file that resolves outside the deck is not served.
+
 ### Themes
 
-`theme` may be `midnight` (the default), `light`, `paper`, or `forest`. Image export uses that palette. Any other value falls back to `midnight`. The browser player uses its built-in dark appearance.
+`theme` may be `midnight` (the default), `light`, `paper`, or `forest`. Image export uses that palette for the slide when `presentation.css` is absent. Any other value falls back to `midnight`. The browser player’s page chrome uses its built-in dark appearance.
+
+### Custom theme
+
+Place `presentation.css` next to `presentation.yml`, or in the same directory as a `.slide.md` file. Flipbook applies it to the slide surface in the browser and in exported images.
+
+```css
+:host {
+  --slide-bg: #f3ecdf;
+  --slide-text: #241c14;
+  --slide-muted: #5e564c;
+  --slide-accent: #9c4228;
+  --slide-mint: #2d6a4f;
+  --slide-heading: #241c14;
+  --slide-line: #e4d8c8;
+  --slide-code: #fffaf3;
+  font-family: "Iowan Old Style", Palatino, Georgia, serif;
+}
+
+:host::after { content: none; }
+```
+
+`:root` in this file is applied to the slide. These variables paint the surface:
+
+| Variable | Role |
+| --- | --- |
+| `--slide-bg` | Background |
+| `--slide-text` | Titles and default type |
+| `--slide-muted` | Body copy |
+| `--slide-accent` | List markers and links |
+| `--slide-mint` | Eyebrow |
+| `--slide-heading` | Third-level headings |
+| `--slide-line` | Borders |
+| `--slide-code` | Code background |
+
+A solid background can hide the default ring with `:host::after { content: none; }`. Local fonts and images referenced with relative `url()` are read from the presentation directory (`.woff2`, `.png`, `.svg`, and the other common font and image types).
+
+The previous button, next button, fullscreen button, and the keys ←, →, F, and Esc keep the player stylesheet. Esc leaves fullscreen.
+
+<img src="docs/screenshots/theme.png" alt="Database indexes slide with a paper presentation.css theme. The controls stay on the built-in player stylesheet." width="880">
 
 ## Present
 
@@ -167,6 +229,13 @@ Each file is named in slide order, for example `01-hello-world.png`. The folder 
 
 `npm run export:instagram` exports `examples/system-design.slide.md` with the Instagram preset.
 
+These two frames are exported from `examples/database-indexes-project`.
+
+<p>
+  <img src="docs/screenshots/export-instagram.png" alt="Instagram export, 1080 by 1350, cover slide" width="280">
+  <img src="docs/screenshots/export-x.png" alt="X export, 1080 by 1080, comparison slide" width="280">
+</p>
+
 ## Development
 
 ```sh
@@ -181,6 +250,7 @@ bin/        CLI entry point
 src/        discovery, Markdown rendering, HTTP server, image export
 public/     browser player
 examples/   sample presentations
+docs/       README screenshots
 test/       automated tests
 ```
 
@@ -192,7 +262,7 @@ Flipbook is for local authoring. The server listens on loopback only. Rendered M
 
 ## Status
 
-Version 0.1.0 includes presentation discovery, Markdown slides, a browser player, carousel PNG export, and tests.
+Version 0.1.0 includes presentation discovery, Markdown slides, a browser player, optional `presentation.css` themes, carousel PNG export, and tests.
 
 This version does not include live reload, a visual editor, PowerPoint export, collaboration, or support for every Markdown extension.
 

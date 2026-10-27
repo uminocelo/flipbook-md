@@ -24,6 +24,7 @@ export async function show(inputPath = ".") {
   console.log("");
   console.log(`  Flipbook MD — ${presentation.title}`);
   console.log(`  ${presentation.slides.length} slide(s)`);
+  if (presentation.themeCss) console.log("  Custom theme: presentation.css");
   console.log("");
   console.log(`  Open: ${instance.url}`);
   console.log("  Press Ctrl+C to stop the server.");

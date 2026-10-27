@@ -7,6 +7,22 @@ const next = document.querySelector("#next");
 let presentation;
 let current = 0;
 
+function mountSlide() {
+  if (slideRoot.shadowRoot) return slideRoot.shadowRoot;
+  const shadow = slideRoot.attachShadow({ mode: "open" });
+  const base = document.createElement("link");
+  base.rel = "stylesheet";
+  base.href = "/slide.css";
+  const theme = document.createElement("link");
+  theme.rel = "stylesheet";
+  theme.href = "/presentation.css";
+  const article = document.createElement("article");
+  article.className = "slide-root";
+  article.setAttribute("aria-live", "polite");
+  shadow.append(base, theme, article);
+  return shadow;
+}
+
 async function boot() {
   try {
     const response = await fetch("/api/presentation");
@@ -26,12 +42,14 @@ function render() {
   if (!presentation?.slides?.length) return;
   current = Math.max(0, Math.min(current, presentation.slides.length - 1));
   const slide = presentation.slides[current];
-  slideRoot.innerHTML = `<p class="eyebrow">${escapeHtml(presentation.title)}</p>${slide.html}`;
+  const shadow = mountSlide();
+  const article = shadow.querySelector(".slide-root");
+  article.innerHTML = `<p class="eyebrow">${escapeHtml(presentation.title)}</p>${slide.html}`;
   counter.textContent = `${current + 1} / ${presentation.slides.length}`;
   progress.style.width = `${((current + 1) / presentation.slides.length) * 100}%`;
   previous.disabled = current === 0;
   next.disabled = current === presentation.slides.length - 1;
-  document.querySelectorAll(".slide a").forEach(a => {
+  shadow.querySelectorAll("a").forEach(a => {
     a.setAttribute("target", "_blank");
     a.setAttribute("rel", "noopener noreferrer");
   });
