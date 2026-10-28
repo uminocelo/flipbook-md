@@ -4,6 +4,8 @@ import matter from "gray-matter";
 import { parse as parseYaml } from "yaml";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+import { loadThemeCss } from "./theme.js";
+import { rewriteAttachmentHtml } from "./attachments.js";
 
 marked.setOptions({
   gfm: true,
@@ -44,13 +46,13 @@ function renderMarkdown(markdown) {
   });
 }
 
-function normalizedSlide(markdown, index) {
+async function normalizedSlide(markdown, index, root, fromDir) {
   const parsed = matter(markdown);
   const content = parsed.content.trim();
   return {
     index,
     title: String(parsed.data.title ?? findTitle(content) ?? `Slide ${index + 1}`),
-    html: renderMarkdown(content)
+    html: await rewriteAttachmentHtml(renderMarkdown(content), root, fromDir)
   };
 }
 
@@ -67,11 +69,14 @@ export async function loadSingleFile(filePath) {
     throw new Error(`No slides found in ${absolutePath}. Add Markdown content after the frontmatter.`);
   }
 
+  const root = await fs.realpath(path.dirname(absolutePath));
   return {
     title: String(parsed.data.title ?? path.basename(absolutePath, ".slide.md")),
     theme: String(parsed.data.theme ?? "midnight"),
+    themeCss: await loadThemeCss(root),
+    root,
     sourcePath: absolutePath,
-    slides: chunks.map((chunk, index) => normalizedSlide(chunk, index))
+    slides: await Promise.all(chunks.map((chunk, index) => normalizedSlide(chunk, index, root, root)))
   };
 }
 
@@ -107,12 +112,14 @@ export async function loadDirectoryProject(projectPath) {
       throw new Error(`Slide path resolves outside the presentation directory: ${relative}`);
     }
     const markdown = await fs.readFile(real, "utf8");
-    slides.push(normalizedSlide(markdown, index));
+    slides.push(await normalizedSlide(markdown, index, root, path.dirname(real)));
   }
 
   return {
     title: String(manifest.title ?? path.basename(root)),
     theme: String(manifest.theme ?? "midnight"),
+    themeCss: await loadThemeCss(root),
+    root,
     sourcePath: root,
     slides
   };
