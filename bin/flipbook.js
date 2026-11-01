@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { show, exportSlides } from "../src/cli.js";
+import { show, exportSlides, check, templateAdd } from "../src/cli.js";
 
 const [command, inputPath = ".", ...args] = process.argv.slice(2);
 function option(name, fallback) {
@@ -9,6 +9,11 @@ function option(name, fallback) {
 try {
   if (!command || command === "show") {
     await show(command ? inputPath : ".");
+  } else if (command === "check") {
+    await check(inputPath);
+  } else if (command === "template") {
+    if (inputPath !== "add") throw new Error(`Unknown template command: ${inputPath}. Use "flipbook template add".`);
+    await templateAdd(args);
   } else if (command === "export") {
     const format = option("--format", "carousel");
     const preset = option("--preset", "instagram");
@@ -20,16 +25,21 @@ try {
 
 Usage:
   flipbook show [path]
+  flipbook check [path]
+  flipbook template add <name> --column <n> --row <n> --width <n> --height <n> --align start|center|end
   flipbook export [path] --format carousel --preset instagram|x --output dist/carousel
 
 Examples:
   flipbook show .
+  flipbook check .
+  flipbook template add quote --column 1 --row 2 --width 2 --height 1 --align start
   flipbook export examples/system-design.slide.md --preset instagram
   flipbook export . --preset x --output dist/x-carousel
 
 Export requires Chromium. After npm install, run: npx playwright install chromium`);
   } else throw new Error(`Unknown command: ${command}. Run "flipbook --help" for usage.`);
 } catch (error) {
-  console.error(`\nFlipbook MD: ${error.message}\n`);
+  if (Array.isArray(error.violations)) console.error(error.violations.join("\n"));
+  else console.error(`\nFlipbook MD: ${error.message}\n`);
   process.exitCode = 1;
 }

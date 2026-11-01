@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { cssForStyleTag, inlineThemeAssets } from "./theme.js";
 import { inlinePresentationFiles } from "./attachments.js";
+import { deckTemplateCss, templateAreaCss } from "./templates.js";
 
 const PRESETS = {
   instagram: { width: 1080, height: 1350, label: "instagram" },
@@ -64,9 +65,10 @@ export async function renderExportDocument(presentation, slide, index, preset) {
   const colors = themeColors(presentation.theme);
   const { width, height } = preset;
   const themeCss = cssForStyleTag(await inlineThemeAssets(presentation.themeCss || "", presentation.root));
-  const base = cssForStyleTag(exportBaseCss(height, colors));
+  const base = cssForStyleTag(exportBaseCss(height, colors) + templateAreaCss(".content") + deckTemplateCss(".content", presentation.templates));
   const slideHtml = await inlinePresentationFiles(slide.html, presentation.root);
-  const inner = `<div class="top"><div class="brand">FLIPBOOK <span>MD</span></div><div>${escapeHtml(presentation.title)}</div></div><div class="rule"></div><main class="content">${slideHtml}</main><div class="footer"><span>Made with Flipbook MD</span><span class="counter">${String(index + 1).padStart(2, "0")} / ${String(presentation.slides.length).padStart(2, "0")}</span></div>`;
+  const template = escapeHtml(slide.template || "flow");
+  const inner = `<div class="top"><div class="brand">FLIPBOOK <span>MD</span></div><div>${escapeHtml(presentation.title)}</div></div><div class="rule"></div><main class="content" data-template="${template}"><div class="slide-body">${slideHtml}</div></main><div class="footer"><span>Made with Flipbook MD</span><span class="counter">${String(index + 1).padStart(2, "0")} / ${String(presentation.slides.length).padStart(2, "0")}</span></div>`;
   const payload = `<style>@layer base{${base}}</style>${themeCss ? `<style>${themeCss}</style>` : ""}${inner}`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=${width}, initial-scale=1"><style>html,body{margin:0;width:${width}px;height:${height}px;overflow:hidden;background:${colors.bg}}#canvas{box-sizing:border-box!important;width:${width}px!important;height:${height}px!important;display:flex!important;flex-direction:column!important}</style></head><body><div id="canvas" class="canvas"></div><script>document.getElementById("canvas").attachShadow({mode:"open"}).innerHTML=${embedScriptString(payload)};</script></body></html>`;
 }

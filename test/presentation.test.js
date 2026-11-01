@@ -45,6 +45,42 @@ test("rejects manifest slide paths that escape project root", async () => fixtur
   await assert.rejects(() => loadDirectoryProject(dir), /escapes/);
 }));
 
+test("reads a template from frontmatter, a comment, and a single-file deck", async () => fixture(async dir => {
+  await fs.mkdir(path.join(dir, "slides"));
+  await fs.writeFile(path.join(dir, "presentation.yml"), `title: Templates\nslides:\n  - slides/01-cover.md\n  - slides/02-summary.md\n  - slides/03-flow.md\n`);
+  await fs.writeFile(path.join(dir, "slides", "01-cover.md"), `---\ntemplate: cover\n---\n<!-- template: summary -->\n# Cover\n`);
+  await fs.writeFile(path.join(dir, "slides", "02-summary.md"), `<!-- template: summary -->\n# Summary\n`);
+  await fs.writeFile(path.join(dir, "slides", "03-flow.md"), `# Flow\n\nHello\n`);
+  const deck = await loadDirectoryProject(dir);
+  assert.equal(deck.slides[0].template, "cover");
+  assert.equal(deck.slides[1].template, "summary");
+  assert.equal(deck.slides[2].template, "flow");
+  assert.match(deck.slides[0].html, /Cover/);
+  assert.doesNotMatch(deck.slides[0].html, /template/);
+  assert.doesNotMatch(deck.slides[1].html, /template/);
+  assert.match(deck.slides[2].html, /Flow/);
+  assert.match(deck.slides[2].html, /Hello/);
+
+  const file = path.join(dir, "mixed.slide.md");
+  await fs.writeFile(file, `---\ntitle: Mixed\n---\n# First\n\nHello\n\n---\n\n<!-- template: summary -->\n# Second\n`);
+  const single = await loadSingleFile(file);
+  assert.equal(single.slides[0].template, "flow");
+  assert.equal(single.slides[1].template, "summary");
+  assert.match(single.slides[1].html, /Second/);
+  assert.doesNotMatch(single.slides[1].html, /template/);
+}));
+
+test("rejects an unknown template and names the slide", async () => fixture(async dir => {
+  await fs.mkdir(path.join(dir, "slides"));
+  await fs.writeFile(path.join(dir, "presentation.yml"), `slides:\n  - slides/01.md\n`);
+  await fs.writeFile(path.join(dir, "slides", "01.md"), `---\ntemplate: poster\n---\n# Nope\n`);
+  await assert.rejects(() => loadDirectoryProject(dir), /Slide 1 uses unknown template "poster"/);
+
+  const file = path.join(dir, "bad.slide.md");
+  await fs.writeFile(file, `# First\n\n---\n\n<!-- template: poster -->\n# Second\n`);
+  await assert.rejects(() => loadSingleFile(file), /Slide 2 uses unknown template "poster"/);
+}));
+
 test("discovers a single-file deck in a directory", async () => fixture(async dir => {
   await fs.writeFile(path.join(dir, "z.slide.md"), "# Z");
   await fs.writeFile(path.join(dir, "a.slide.md"), "# A");

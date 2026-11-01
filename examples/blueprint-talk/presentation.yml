@@ -1,0 +1,8 @@
+title: "Brief a Decision"
+theme: "midnight"
+slides:
+  - "slides/01_cover.slide.md"
+  - "slides/02_point.slide.md"
+  - "slides/03_point.slide.md"
+  - "slides/04_point.slide.md"
+  - "slides/05_conclusion.slide.md"

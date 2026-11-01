@@ -1,0 +1,16 @@
+pages:
+  - type: cover
+  - type: point
+    repeat:
+      min: 3
+      max: 6
+  - type: conclusion
+types:
+  cover:
+    template: cover
+  point:
+    allow: [heading, paragraph, list]
+  conclusion:
+    template: summary
+    allow: [heading, paragraph]
+    max_chars: 250

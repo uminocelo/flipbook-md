@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assetMime, resolveThemeAsset, rewriteThemeUrls } from "./theme.js";
+import { deckTemplateCss } from "./templates.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, "../public");
@@ -38,6 +39,11 @@ export async function startServer(presentation, { host = "127.0.0.1", port = 0 }
         theme: presentation.theme,
         slides: presentation.slides
       }), "application/json; charset=utf-8");
+    }
+
+    if (url.pathname === "/templates.css") {
+      const css = deckTemplateCss(".slide-root", presentation.templates ?? {});
+      return send(res, 200, css, "text/css; charset=utf-8", { "Cache-Control": "no-store" });
     }
 
     if (url.pathname === "/presentation.css") {

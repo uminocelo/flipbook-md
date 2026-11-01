@@ -18,6 +18,11 @@
     font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
+  :host:has(.slide-root[data-template="cover"]),
+  :host:has(.slide-root[data-template="summary"]) {
+    height: min(65vh, 660px);
+  }
+
   :host::after {
     content: "";
     position: absolute;
@@ -33,6 +38,33 @@
   }
 
   .slide-root { position: relative; z-index: 1; }
+
+  /* cover: center cell. summary: lower-right four cells. flow stays block layout. */
+  .slide-root[data-template="cover"],
+  .slide-root[data-template="summary"] {
+    flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  .slide-root[data-template="cover"] .slide-body {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .slide-root[data-template="summary"] .slide-body {
+    grid-column: 2 / 4;
+    grid-row: 2 / 4;
+    align-self: end;
+    justify-self: stretch;
+  }
 
   .eyebrow {
     margin: 0 0 1.4rem;

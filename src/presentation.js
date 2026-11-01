@@ -6,6 +6,8 @@ import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { loadThemeCss } from "./theme.js";
 import { rewriteAttachmentHtml } from "./attachments.js";
+import { loadDeckTemplates, resolveSlideTemplate } from "./templates.js";
+import { applyBlueprint, pageTypeFromFilename, readPageType } from "./blueprint.js";
 
 marked.setOptions({
   gfm: true,
@@ -46,12 +48,19 @@ function renderMarkdown(markdown) {
   });
 }
 
-async function normalizedSlide(markdown, index, root, fromDir) {
+async function normalizedSlide(markdown, index, root, fromDir, source, templates) {
   const parsed = matter(markdown);
-  const content = parsed.content.trim();
+  const typed = readPageType(parsed.content, index + 1);
+  const resolved = resolveSlideTemplate(parsed.data.template, typed.body, index + 1, templates);
+  const content = resolved.body.trim();
   return {
     index,
+    source,
     title: String(parsed.data.title ?? findTitle(content) ?? `Slide ${index + 1}`),
+    template: resolved.template,
+    templateExplicit: resolved.explicit,
+    type: pageTypeFromFilename(source) ?? typed.type,
+    markdown: content,
     html: await rewriteAttachmentHtml(renderMarkdown(content), root, fromDir)
   };
 }
@@ -70,14 +79,17 @@ export async function loadSingleFile(filePath) {
   }
 
   const root = await fs.realpath(path.dirname(absolutePath));
-  return {
+  const templates = await loadDeckTemplates(root);
+  const deck = {
     title: String(parsed.data.title ?? path.basename(absolutePath, ".slide.md")),
     theme: String(parsed.data.theme ?? "midnight"),
     themeCss: await loadThemeCss(root),
     root,
     sourcePath: absolutePath,
-    slides: await Promise.all(chunks.map((chunk, index) => normalizedSlide(chunk, index, root, root)))
+    templates,
+    slides: await Promise.all(chunks.map((chunk, index) => normalizedSlide(chunk, index, root, root, `slide ${index + 1}`, templates)))
   };
+  return applyBlueprint(deck);
 }
 
 export async function loadDirectoryProject(projectPath) {
@@ -93,6 +105,7 @@ export async function loadDirectoryProject(projectPath) {
     throw new Error(`${manifestPath} must define a non-empty "slides" list.`);
   }
 
+  const templates = await loadDeckTemplates(root);
   const slides = [];
   for (const [index, item] of manifest.slides.entries()) {
     const relative = typeof item === "string" ? item : item?.file;
@@ -112,17 +125,19 @@ export async function loadDirectoryProject(projectPath) {
       throw new Error(`Slide path resolves outside the presentation directory: ${relative}`);
     }
     const markdown = await fs.readFile(real, "utf8");
-    slides.push(await normalizedSlide(markdown, index, root, path.dirname(real)));
+    const sourceLabel = relative.split(path.sep).join("/");
+    slides.push(await normalizedSlide(markdown, index, root, path.dirname(real), sourceLabel, templates));
   }
 
-  return {
+  return applyBlueprint({
     title: String(manifest.title ?? path.basename(root)),
     theme: String(manifest.theme ?? "midnight"),
     themeCss: await loadThemeCss(root),
     root,
     sourcePath: root,
+    templates,
     slides
-  };
+  });
 }
 
 export async function discoverPresentation(inputPath = ".") {

@@ -56,10 +56,12 @@ node bin/flipbook.js show .
 | Command | What it does |
 | --- | --- |
 | `flipbook show [path]` | Serves the presentation on `127.0.0.1` and opens it in a browser. |
+| `flipbook check [path]` | Checks an optional `blueprint.yml`. Exits 0 when that file is absent or the deck passes. Exits 1 when a rule fails. |
+| `flipbook template add <name> --column <n> --row <n> --width <n> --height <n> --align start\|center\|end` | Saves one grid placement into the deck and into `~/Documents/flipbook/templates/`. |
 | `flipbook export [path]` | Writes one PNG per slide. |
 | `flipbook --help` | Prints usage. |
 
-Omit `path` to use the current directory. Both `show` and `export` accept:
+Omit `path` to use the current directory. `show`, `check`, and `export` accept:
 
 - a `*.slide.md` file
 - a directory that contains a `*.slide.md` file
@@ -128,6 +130,82 @@ flipbook show ./my-talk
 Each slide path must stay inside the presentation directory. Flipbook rejects a manifest path that escapes the project, including a path that resolves outside it through a symlink.
 
 The same directory can also hold one `<name>.slide.md` with every slide in a single file. `flipbook show` on the directory uses `presentation.yml` when that file is present.
+
+### Slide templates
+
+A slide can place its body on a 3×3 grid. Omit the template and the slide keeps the current block layout. That default is named `flow`.
+
+Set the name in YAML frontmatter or with a comment. When both are set, frontmatter wins. The comment is not rendered.
+
+```markdown
+---
+template: cover
+---
+
+# Title
+```
+
+```markdown
+<!-- template: cover -->
+
+# Title
+```
+
+`cover` places the body in the center cell and centers it. `summary` places the body in the lower-right four cells, rows 2–3 and columns 2–3. `flow` does not use the grid.
+
+A name that Flipbook does not know fails the load and names the slide. A deck can add names in `templates.yml`. Each name is one region on the same grid, with `column`, `row`, `width`, `height`, and `align` (`start`, `center`, or `end`). `column` and `row` start at 1. The region stays inside the grid. `flow`, `cover`, and `summary` cannot be replaced.
+
+```sh
+flipbook template add quote --column 1 --row 2 --width 2 --height 1 --align start
+```
+
+Run that command in the deck directory. It writes the `quote` key into `templates.yml` and saves the same fields as `~/Documents/flipbook/templates/quote.yml`. `show` and `export` read the deck file. They do not read the home folder. A slide then uses `<!-- template: quote -->`.
+
+### Blueprint
+
+`blueprint.yml` is optional and sits next to `presentation.yml`. No file means no checks. Flipbook does not write the slide prose.
+
+```yaml
+pages:
+  - type: cover
+  - type: point
+    repeat:
+      min: 3
+      max: 6
+  - type: conclusion
+types:
+  cover:
+    template: cover
+  point:
+    allow: [heading, paragraph, list]
+  conclusion:
+    template: summary
+    allow: [heading, paragraph]
+    max_chars: 250
+```
+
+The `conclusion` type allows only a heading and a paragraph, and at most 250 characters of visible text. Markdown markers are not counted.
+
+The page type of a directory slide is the `_<type>` suffix before `.slide.md`. `slides/01_cover.slide.md` is type `cover`. `nameofdeck_conclusion.slide.md` is type `conclusion`. `slides/01-intro.slide.md` has no type. When the filename and a comment disagree, the filename wins.
+
+A single-file deck sets the type on each slide, because one filename cannot type every slide:
+
+```markdown
+<!-- type: conclusion -->
+<!-- template: summary -->
+
+# The ask
+
+One short paragraph.
+```
+
+```sh
+flipbook check examples/blueprint-talk
+```
+
+`flipbook check [path]` exits 0 when `blueprint.yml` is absent and when the deck matches. It exits 1 when a rule fails and prints each violation. `flipbook show` and `flipbook export` refuse a deck that fails the same check.
+
+`examples/blueprint-talk` is a five-slide deck that passes. Its cover uses `cover`, its conclusion uses `summary`, and three point slides sit between them.
 
 ### Images and other files
 
@@ -262,7 +340,7 @@ Flipbook is for local authoring. The server listens on loopback only. Rendered M
 
 ## Status
 
-Version 0.1.0 includes presentation discovery, Markdown slides, a browser player, optional `presentation.css` themes, carousel PNG export, and tests.
+Version 0.1.0 includes presentation discovery, Markdown slides, a browser player, optional `presentation.css` themes, slide templates, optional `blueprint.yml` checks, carousel PNG export, and tests.
 
 This version does not include live reload, a visual editor, PowerPoint export, collaboration, or support for every Markdown extension.
 

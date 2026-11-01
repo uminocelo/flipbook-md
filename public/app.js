@@ -13,13 +13,16 @@ function mountSlide() {
   const base = document.createElement("link");
   base.rel = "stylesheet";
   base.href = "/slide.css";
+  const templates = document.createElement("link");
+  templates.rel = "stylesheet";
+  templates.href = "/templates.css";
   const theme = document.createElement("link");
   theme.rel = "stylesheet";
   theme.href = "/presentation.css";
   const article = document.createElement("article");
   article.className = "slide-root";
   article.setAttribute("aria-live", "polite");
-  shadow.append(base, theme, article);
+  shadow.append(base, templates, theme, article);
   return shadow;
 }
 
@@ -44,7 +47,8 @@ function render() {
   const slide = presentation.slides[current];
   const shadow = mountSlide();
   const article = shadow.querySelector(".slide-root");
-  article.innerHTML = `<p class="eyebrow">${escapeHtml(presentation.title)}</p>${slide.html}`;
+  article.setAttribute("data-template", slide.template || "flow");
+  article.innerHTML = `<p class="eyebrow">${escapeHtml(presentation.title)}</p><div class="slide-body">${slide.html}</div>`;
   counter.textContent = `${current + 1} / ${presentation.slides.length}`;
   progress.style.width = `${((current + 1) / presentation.slides.length) * 100}%`;
   previous.disabled = current === 0;
