@@ -255,6 +255,12 @@ test("counts top-level list items across a slide", () => {
   assert.equal(measureMarkdown("# T\n\n> - quoted\n").items, 0);
 });
 
+test("counts list item text toward max_chars", () => {
+  assert.equal(measureMarkdown("- hello world\n").chars, 11);
+  assert.equal(measureMarkdown("- **bold** item\n  - nested\n").chars, 15);
+  assert.equal(measureMarkdown("- a\n\n- loose item\n").chars, 11);
+});
+
 test("enforces max_items and require", async () => fixture(async dir => {
   const rules = talkBlueprint
     .replace("    allow: [heading, paragraph, list]\n", "    allow: [heading, paragraph, list]\n    max_items: 5\n    require: [list]\n");
