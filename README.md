@@ -186,6 +186,29 @@ types:
 
 The `conclusion` type allows only a heading and a paragraph, and at most 250 characters of visible text. Markdown markers are not counted.
 
+Each type can set these rules. A `pages` step can override any of them except `template` for the slides it matches.
+
+| Rule | Meaning |
+| --- | --- |
+| `template` | Grid placement the slide must use. A slide that sets none inherits it. |
+| `allow` | The only content kinds the slide may contain. |
+| `forbid` | Content kinds the slide may not contain. |
+| `require` | Content kinds the slide must contain, each at least once. |
+| `max_chars` | Maximum visible characters on the slide. |
+| `max_items` | Maximum top-level list items on the slide, across all its lists. Nested items are not counted. |
+
+The kinds are `heading`, `paragraph`, `list`, `code`, `image`, `blockquote`, and `table`.
+
+```yaml
+types:
+  summary:
+    allow: [heading, list, table]
+    require: [list]
+  development:
+    allow: [heading, paragraph, list]
+    max_items: 5
+```
+
 The page type of a directory slide is the `_<type>` suffix before `.slide.md`. `slides/01_cover.slide.md` is type `cover`. `nameofdeck_conclusion.slide.md` is type `conclusion`. `slides/01-intro.slide.md` has no type. When the filename and a comment disagree, the filename wins.
 
 A single-file deck sets the type on each slide, because one filename cannot type every slide:

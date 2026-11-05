@@ -248,3 +248,42 @@ test("flipbook check gates show and export", async () => fixture(async dir => {
   await assert.rejects(() => exportSlides(dir, { preset: "instagram", outputDir: output }), /maximum is 250/);
   await assert.rejects(fs.access(output));
 }));
+
+test("counts top-level list items across a slide", () => {
+  assert.equal(measureMarkdown("# T\n\nText.\n").items, 0);
+  assert.equal(measureMarkdown("# T\n\n- a\n- b\n  - nested\n\n1. c\n").items, 3);
+  assert.equal(measureMarkdown("# T\n\n> - quoted\n").items, 0);
+});
+
+test("enforces max_items and require", async () => fixture(async dir => {
+  const rules = talkBlueprint
+    .replace("    allow: [heading, paragraph, list]\n", "    allow: [heading, paragraph, list]\n    max_items: 5\n    require: [list]\n");
+  const deck = (point) => ({
+    "slides/01_cover.slide.md": "# Cover\n",
+    "slides/02_point.slide.md": point,
+    "slides/03_point.slide.md": "# Two\n\nText.\n\n- a\n",
+    "slides/04_point.slide.md": "# Three\n\nText.\n\n- b\n",
+    "slides/05_conclusion.slide.md": "# End\n\nDone.\n"
+  });
+  const bullets = (n) => `# One\n\n${Array.from({ length: n }, (_, i) => `- item ${i + 1}`).join("\n")}\n`;
+
+  await writeDeck(dir, deck(bullets(5)), rules);
+  assert.equal((await loadDirectoryProject(dir)).slides.length, 5);
+
+  await writeDeck(dir, deck(bullets(6)), rules);
+  await assert.rejects(() => loadDirectoryProject(dir), /02_point\.slide\.md: lists have 6 items; maximum is 5/);
+
+  await writeDeck(dir, deck("# One\n\nOnly text.\n"), rules);
+  await assert.rejects(() => loadDirectoryProject(dir), /02_point\.slide\.md: list is required/);
+
+  const stepOverride = rules.replace("      max: 6\n", "      max: 6\n    max_items: 7\n    require: [paragraph]\n");
+  await writeDeck(dir, deck(`# One\n\nIntro.\n\n${bullets(7).split("\n\n")[1]}`), stepOverride);
+  assert.equal((await loadDirectoryProject(dir)).slides.length, 5);
+  await writeDeck(dir, deck(bullets(3)), stepOverride);
+  await assert.rejects(() => loadDirectoryProject(dir), /paragraph is required/);
+
+  for (const bad of ["max_items: -1", "max_items: two", "require: [chart]", "require: list"]) {
+    await writeDeck(dir, deck(bullets(1)), rules.replace("    max_items: 5\n    require: [list]\n", `    ${bad}\n`));
+    await assert.rejects(() => loadDirectoryProject(dir), /blueprint\.yml type "point" has an invalid (max_items|require)/);
+  }
+}));
