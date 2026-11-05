@@ -43,12 +43,14 @@ export function measureMarkdown(markdown) {
   const seen = walkBlocks(marked.lexer(source), false);
   return {
     kinds: [...seen.kinds],
-    chars: Array.from(seen.text).length
+    chars: Array.from(seen.text).length,
+    items: seen.items
   };
 }
 
 function walkBlocks(tokens, inside) {
   let text = "";
+  let items = 0;
   const kinds = new Set();
   for (const token of tokens ?? []) {
     if (token.type === "space" || token.type === "hr" || token.type === "html") continue;
@@ -63,7 +65,10 @@ function walkBlocks(tokens, inside) {
       }
       text += inline.text;
     } else if (token.type === "list") {
-      if (!inside) kinds.add("list");
+      if (!inside) {
+        kinds.add("list");
+        items += token.items?.length ?? 0;
+      }
       for (const item of token.items ?? []) {
         const inner = walkBlocks(item.tokens, true);
         text += inner.text;
@@ -83,7 +88,7 @@ function walkBlocks(tokens, inside) {
       }
     }
   }
-  return { text, kinds };
+  return { text, kinds, items };
 }
 
 function inlineParts(tokens) {
@@ -185,15 +190,17 @@ function normalizeRules(rules, where, extraTemplates = {}) {
 
 function overrides(source, where) {
   const result = {};
-  if (source.max_chars != null) result.max_chars = normalizeMaxChars(source.max_chars, where);
+  if (source.max_chars != null) result.max_chars = normalizeCount(source.max_chars, where, "max_chars");
+  if (source.max_items != null) result.max_items = normalizeCount(source.max_items, where, "max_items");
+  if (source.require != null) result.require = normalizeKinds(source.require, where, "require");
   if (source.allow != null) result.allow = normalizeKinds(source.allow, where, "allow");
   if (source.forbid != null) result.forbid = normalizeKinds(source.forbid, where, "forbid");
   return result;
 }
 
-function normalizeMaxChars(value, where) {
+function normalizeCount(value, where, field) {
   if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`blueprint.yml ${where} has an invalid max_chars.`);
+    throw new Error(`blueprint.yml ${where} has an invalid ${field}.`);
   }
   return value;
 }
@@ -234,9 +241,17 @@ export function evaluateBlueprint(deck, blueprint) {
     const maxChars = step.max_chars ?? rules.max_chars;
     const allow = step.allow ?? rules.allow;
     const forbid = step.forbid ?? rules.forbid;
+    const maxItems = step.max_items ?? rules.max_items;
+    const require = step.require ?? rules.require;
     const measured = measureMarkdown(slide.markdown ?? "");
     if (maxChars != null && measured.chars > maxChars) {
       violations.push(`${slide.source}: visible text is ${measured.chars} characters; maximum is ${maxChars}.`);
+    }
+    if (maxItems != null && measured.items > maxItems) {
+      violations.push(`${slide.source}: lists have ${measured.items} items; maximum is ${maxItems}.`);
+    }
+    for (const kind of require ?? []) {
+      if (!measured.kinds.includes(kind)) violations.push(`${slide.source}: ${kind} is required.`);
     }
     for (const kind of measured.kinds) {
       if ((allow && !allow.includes(kind)) || (forbid && forbid.includes(kind))) {
