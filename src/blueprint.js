@@ -64,6 +64,8 @@ function walkBlocks(tokens, inside) {
         for (const kind of inline.kinds) kinds.add(kind);
       }
       text += inline.text;
+    } else if (token.type === "text") {
+      text += token.tokens?.length ? inlineText(token.tokens) : (token.text ?? "");
     } else if (token.type === "list") {
       if (!inside) {
         kinds.add("list");
