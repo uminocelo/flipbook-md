@@ -4,7 +4,7 @@
 
 **Markdown in. Slides out.**
 
-Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser. The same source can be exported as numbered PNG images for an Instagram carousel or an X multi-image post.
+Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser. The same source can be exported as numbered PNG images for a multi-image post on Instagram, X, LinkedIn, YouTube, or TikTok.
 
 ![Flipbook player showing the database indexes example](docs/screenshots/player.png)
 
@@ -315,6 +315,12 @@ flipbook export examples/system-design.slide.md --format carousel --preset insta
 # Square images for X, 1080 × 1080 (1:1)
 flipbook export examples/system-design.slide.md --format carousel --preset x
 
+# LinkedIn landscape or link preview, 1200 × 627 (1.91:1)
+flipbook export examples/system-design.slide.md --format carousel --preset linkedin-landscape
+
+# TikTok vertical, 1080 × 1920 (9:16)
+flipbook export examples/system-design.slide.md --format carousel --preset tiktok
+
 # Choose the output folder
 flipbook export . --format carousel --preset instagram --output dist/instagram
 ```
@@ -323,6 +329,15 @@ flipbook export . --format carousel --preset instagram --output dist/instagram
 | --- | ---: | --- | --- |
 | `instagram` | 1080 × 1350 | 4:5 portrait | Instagram carousel |
 | `x` | 1080 × 1080 | 1:1 square | X multi-image post |
+| `linkedin` | 1080 × 1350 | 4:5 portrait | LinkedIn post; uses the most mobile feed space |
+| `linkedin-square` | 1080 × 1080 | 1:1 square | LinkedIn post |
+| `linkedin-landscape` | 1200 × 627 | 1.91:1 landscape | LinkedIn shared image or link preview |
+| `youtube` | 1080 × 1080 | 1:1 square | YouTube community post |
+| `tiktok` | 1080 × 1920 | 9:16 vertical | TikTok photo post; fills the screen without bars |
+
+`flipbook --help` lists the same presets. Type and spacing scale with the image: `linkedin-landscape` uses smaller type so a slide fits in 627 pixels, and `tiktok` uses larger type to fill the tall frame. TikTok also accepts 1:1 and 4:5 posts, so `x` and `instagram` work there too.
+
+Export warns when a slide's content does not fit the image and is cut off, and names the slide. Shorten that slide or choose a taller preset.
 
 `--format` accepts `carousel`. The default preset is `instagram`, and the default output directory is `dist/carousel`.
 
