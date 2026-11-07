@@ -84,6 +84,9 @@ export async function exportSlides(inputPath = ".", options = {}) {
   console.log(`  Flipbook MD — exported ${result.count} slide image(s)`);
   console.log(`  Format: ${result.preset} (${result.width} × ${result.height})`);
   console.log(`  Output: ${result.outputDir}`);
+  if (result.clipped?.length) {
+    console.log(`  Warning: slide(s) ${result.clipped.join(", ")} do not fit the ${result.preset} image and are cut off. Shorten them or pick a taller preset.`);
+  }
   console.log("");
   return result;
 }

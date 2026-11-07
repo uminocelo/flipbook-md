@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { show, exportSlides, check, templateAdd } from "../src/cli.js";
+import { PRESETS } from "../src/export.js";
 
 const [command, inputPath = ".", ...args] = process.argv.slice(2);
 function option(name, fallback) {
@@ -27,7 +28,7 @@ Usage:
   flipbook show [path]
   flipbook check [path]
   flipbook template add <name> --column <n> --row <n> --width <n> --height <n> --align start|center|end
-  flipbook export [path] --format carousel --preset instagram|x --output dist/carousel
+  flipbook export [path] --format carousel --preset <preset> --output dist/carousel
 
 Examples:
   flipbook show .
@@ -35,6 +36,9 @@ Examples:
   flipbook template add quote --column 1 --row 2 --width 2 --height 1 --align start
   flipbook export examples/system-design.slide.md --preset instagram
   flipbook export . --preset x --output dist/x-carousel
+
+Export presets:
+${Object.values(PRESETS).map((preset) => `  ${preset.label.padEnd(20)}${`${preset.width} × ${preset.height}`.padEnd(13)}${preset.use}`).join("\n")}
 
 Export requires Chromium. After npm install, run: npx playwright install chromium`);
   } else throw new Error(`Unknown command: ${command}. Run "flipbook --help" for usage.`);
