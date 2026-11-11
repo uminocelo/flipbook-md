@@ -7,7 +7,15 @@
     "markdown",
     "slides",
     "presentation",
-    "carousel"
+    "slideshow",
+    "carousel",
+    "nodejs",
+    "social-media",
+    "instagram-carousel",
+    "linkedin-carousel",
+    "playwright",
+    "png-export",
+    "developer-tools"
   ],
   "homepage": "https://github.com/uminocelo/flipbook-md",
   "bugs": {
@@ -27,6 +35,7 @@
     "bin/",
     "src/",
     "public/",
+    "library/",
     "README.md",
     "LICENSE"
   ],

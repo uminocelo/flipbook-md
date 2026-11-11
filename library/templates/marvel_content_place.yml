@@ -1,0 +1,73 @@
+name: marvel_content_place
+description: TikTok place post. Cover, table of contents, then one page per place.
+style: marvel-sentinel
+canvas: midnight
+themes:
+  - marvel-ultron
+  - marvel-jarvis
+  - marvel-herbie
+  - marvel-sentinel
+chrome:
+  counter:
+    corner: top-right
+    line: dotted
+    line_align: top
+    line_length: 100%
+    ornament: "▣"
+  header:
+    kind: shapes
+    shape: pentagram
+  footer:
+    kind: line
+    line: dashed
+templates:
+  marvel_content_place_cover:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: center
+    role: cover
+    layout: poster
+  marvel_content_place_toc:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: toc
+    layout: list
+  marvel_content_place_content:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: content
+    layout: content
+blueprint:
+  pages:
+    - type: cover
+    - type: toc
+    - type: content
+      repeat:
+        min: 0
+        max: 16
+  types:
+    cover:
+      template: marvel_content_place_cover
+      allow: [heading, paragraph, image]
+      require: [heading, image]
+      max_chars: 220
+    toc:
+      template: marvel_content_place_toc
+      allow: [heading, paragraph, list]
+      require: [heading, list]
+      max_items: 8
+      max_chars: 360
+    content:
+      template: marvel_content_place_content
+      allow: [heading, paragraph, list, image, blockquote]
+      require: [heading]
+      max_items: 5
+      max_chars: 620

@@ -136,7 +136,7 @@ export async function loadBlueprint(root, extraTemplates = {}) {
   return normalizeBlueprint(parsed, extraTemplates);
 }
 
-function normalizeBlueprint(parsed, extraTemplates = {}) {
+export function normalizeBlueprint(parsed, extraTemplates = {}) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("blueprint.yml must contain a YAML object.");
   }
@@ -155,25 +155,38 @@ function normalizeBlueprint(parsed, extraTemplates = {}) {
     types[name] = normalizeRules(rules, `type "${name}"`, extraTemplates);
   }
 
-  const pages = parsed.pages.map((step, index) => {
-    if (!step || typeof step !== "object" || Array.isArray(step)) {
-      throw new Error(`blueprint.yml page ${index + 1} must be a mapping.`);
-    }
-    const type = String(step.type ?? "");
-    if (!TYPE_NAME.test(type)) {
-      throw new Error(`blueprint.yml page ${index + 1} has an invalid type "${type}".`);
-    }
-    if (!types[type]) {
-      throw new Error(`blueprint.yml page ${index + 1} uses unknown type "${type}".`);
-    }
-    return {
-      type,
-      repeat: normalizeRepeat(step.repeat, `page ${index + 1}`),
-      ...overrides(step, `page ${index + 1}`)
-    };
-  });
+  const pages = parsed.pages.map((step, index) => normalizePage(step, index, types));
 
   return { pages, types };
+}
+
+function normalizePage(step, index, types) {
+  const where = `page ${index + 1}`;
+  if (!step || typeof step !== "object" || Array.isArray(step)) {
+    throw new Error(`blueprint.yml ${where} must be a mapping.`);
+  }
+  const hasType = step.type != null && String(step.type) !== "";
+  const hasAny = step.any != null;
+  if (hasType && hasAny) throw new Error(`blueprint.yml ${where} cannot set both type and any.`);
+  const repeat = normalizeRepeat(step.repeat, where);
+  const extra = overrides(step, where);
+  if (hasAny) {
+    if (!Array.isArray(step.any) || step.any.length === 0) {
+      throw new Error(`blueprint.yml ${where} has an invalid any list.`);
+    }
+    const any = step.any.map((item) => {
+      const type = String(item ?? "");
+      if (!TYPE_NAME.test(type) || !types[type]) {
+        throw new Error(`blueprint.yml ${where} uses unknown type "${type}".`);
+      }
+      return type;
+    });
+    return { type: null, any, repeat, ...extra };
+  }
+  const type = String(step.type ?? "");
+  if (!TYPE_NAME.test(type)) throw new Error(`blueprint.yml ${where} has an invalid type "${type}".`);
+  if (!types[type]) throw new Error(`blueprint.yml ${where} uses unknown type "${type}".`);
+  return { type, any: null, repeat, ...extra };
 }
 
 function normalizeRules(rules, where, extraTemplates = {}) {
@@ -269,6 +282,14 @@ function matchPages(slides, pages) {
   return result.ok ? { ok: true, pairs: result.pairs } : { ok: false, violations: result.violations };
 }
 
+function stepLabel(step) {
+  return step.any ? `one of ${step.any.join(", ")}` : step.type;
+}
+
+function slideMatches(slide, step) {
+  return step.any ? step.any.includes(slide.type) : slide.type === step.type;
+}
+
 function walk(slides, pages, slideIndex, stepIndex, pairs) {
   if (stepIndex === pages.length) {
     if (slideIndex === slides.length) return { ok: true, pairs };
@@ -285,7 +306,7 @@ function walk(slides, pages, slideIndex, stepIndex, pairs) {
   let closest = null;
   for (let count = step.repeat.min; count <= step.repeat.max; count += 1) {
     const slice = slides.slice(slideIndex, slideIndex + count);
-    if (slice.length !== count || slice.some((slide) => slide.type !== step.type)) continue;
+    if (slice.length !== count || slice.some((slide) => !slideMatches(slide, step))) continue;
     const next = walk(slides, pages, slideIndex + count, stepIndex + 1, pairs.concat(slice.map((slide) => ({ slide, step }))));
     if (next.ok) return next;
     if (!closest || next.violations.length < closest.violations.length) closest = next;
@@ -293,26 +314,36 @@ function walk(slides, pages, slideIndex, stepIndex, pairs) {
   if (closest) return closest;
 
   const here = slides[slideIndex];
-  if (!here) return { ok: false, violations: [`blueprint.yml: expected ${step.type} but the deck ended.`] };
-  if (!here.type) return { ok: false, violations: [`${here.source}: slide has no page type. Expected ${step.type}.`] };
-  const run = slides.slice(slideIndex).findIndex((slide) => slide.type !== step.type);
+  const label = stepLabel(step);
+  if (!here) return { ok: false, violations: [`blueprint.yml: expected ${label} but the deck ended.`] };
+  if (!here.type) return { ok: false, violations: [`${here.source}: slide has no page type. Expected ${label}.`] };
+  const run = slides.slice(slideIndex).findIndex((slide) => !slideMatches(slide, step));
   const count = run === -1 ? slides.length - slideIndex : run;
-  if (here.type === step.type && count < step.repeat.min) {
-    return { ok: false, violations: [`${here.source}: expected at least ${step.repeat.min} ${step.type} slide(s), found ${count}.`] };
+  if (slideMatches(here, step) && count < step.repeat.min) {
+    return { ok: false, violations: [`${here.source}: expected at least ${step.repeat.min} ${label} slide(s), found ${count}.`] };
   }
-  return { ok: false, violations: [`${here.source}: expected ${step.type}, found ${here.type}.`] };
+  return { ok: false, violations: [`${here.source}: expected ${label}, found ${here.type}.`] };
 }
 
 export async function applyBlueprint(deck) {
-  const blueprint = await loadBlueprint(deck.root, deck.templates ?? {});
+  let blueprint = await loadBlueprint(deck.root, deck.templates ?? {});
+  if (!blueprint && deck.groupBlueprint) {
+    blueprint = normalizeBlueprint(deck.groupBlueprint, deck.templates ?? {});
+  }
   if (blueprint) {
     const violations = evaluateBlueprint(deck, blueprint);
     if (violations.length) throw new BlueprintError(violations);
   }
   for (const slide of deck.slides) {
+    const record = deck.templates?.[slide.template];
+    slide.layout = record?.layout ?? null;
+    slide.role = record?.role ?? (slide.template === "cover" ? "cover" : null);
+    slide.density = record?.density ?? null;
+    slide.showCounter = Boolean(deck.chrome) && (slide.role !== "cover" && slide.template !== "cover" && slide.type !== "cover");
     delete slide.markdown;
     delete slide.templateExplicit;
   }
   deck.blueprint = blueprint;
+  delete deck.groupBlueprint;
   return deck;
 }

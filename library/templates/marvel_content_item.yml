@@ -1,0 +1,73 @@
+name: marvel_content_item
+description: TikTok item post. Cover, table of contents, then one page per artifact.
+style: marvel-herbie
+canvas: light
+themes:
+  - marvel-ultron
+  - marvel-jarvis
+  - marvel-herbie
+  - marvel-sentinel
+chrome:
+  counter:
+    corner: bottom-right
+    line: solid
+    line_align: middle
+    line_length: 46%
+    ornament: "✶"
+  header:
+    kind: shapes
+    shape: triangle
+  footer:
+    kind: line
+    line: straight
+templates:
+  marvel_content_item_cover:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: center
+    role: cover
+    layout: poster
+  marvel_content_item_toc:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: toc
+    layout: list
+  marvel_content_item_content:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: content
+    layout: content
+blueprint:
+  pages:
+    - type: cover
+    - type: toc
+    - type: content
+      repeat:
+        min: 0
+        max: 16
+  types:
+    cover:
+      template: marvel_content_item_cover
+      allow: [heading, paragraph, image]
+      require: [heading, image]
+      max_chars: 220
+    toc:
+      template: marvel_content_item_toc
+      allow: [heading, paragraph, list]
+      require: [heading, list]
+      max_items: 8
+      max_chars: 360
+    content:
+      template: marvel_content_item_content
+      allow: [heading, paragraph, list, image, blockquote]
+      require: [heading]
+      max_items: 5
+      max_chars: 620

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { themeLibraryDirs } from "./templates.js";
 
 const MAX_THEME_CSS_BYTES = 512 * 1024;
 
@@ -137,6 +138,23 @@ export async function inlineThemeAssets(css, root) {
 export function cssForStyleTag(css) {
   // Keep "</style>" from closing an HTML style tag. "\3C " is "<" in CSS.
   return String(css).replace(/</g, "\\3C ");
+}
+
+export async function loadNamedTheme(name) {
+  const key = String(name ?? "").trim();
+  if (!/^[a-z0-9-]+$/.test(key)) throw new Error(`Theme "${name}" is not a valid theme name.`);
+  for (const dir of themeLibraryDirs()) {
+    const file = path.join(dir, `${key}.css`);
+    try {
+      await fs.access(file);
+    } catch {
+      continue;
+    }
+    const css = scopeThemeCss(await fs.readFile(file, "utf8")).replace(/^\uFEFF/, "");
+    if (Buffer.byteLength(css) > MAX_THEME_CSS_BYTES) throw new Error(`${key}.css is larger than 512 KB.`);
+    return css.trim();
+  }
+  throw new Error(`Theme "${key}" was not found. Add ${key}.css to ~/Documents/flipbook/themes.`);
 }
 
 export async function loadThemeCss(directory) {

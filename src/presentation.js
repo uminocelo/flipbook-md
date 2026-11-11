@@ -4,10 +4,13 @@ import matter from "gray-matter";
 import { parse as parseYaml } from "yaml";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
-import { loadThemeCss } from "./theme.js";
+import { loadNamedTheme, loadThemeCss } from "./theme.js";
 import { rewriteAttachmentHtml } from "./attachments.js";
 import { loadDeckTemplates, resolveSlideTemplate } from "./templates.js";
 import { applyBlueprint, pageTypeFromFilename, readPageType } from "./blueprint.js";
+import { mergeChrome, parseChrome } from "./chrome.js";
+import { loadGroup } from "./groups.js";
+import { loadConfiguration, playbackFromConfiguration } from "./configuration.js";
 
 marked.setOptions({
   gfm: true,
@@ -26,18 +29,73 @@ const ALLOWED_ATTRIBUTES = {
   input: ["type", "checked", "disabled"]
 };
 
+const NOTES_COMMENT = /<!--\s*notes:\s*([\s\S]*?)-->/gi;
+
+function noteString(value) {
+  if (value == null || value === "") return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  throw new Error("Slide notes must be a string.");
+}
+
+export function extractNotes(markdown, frontmatterNotes) {
+  const chunks = [];
+  const fromFrontmatter = noteString(frontmatterNotes);
+  if (fromFrontmatter) chunks.push(fromFrontmatter);
+  NOTES_COMMENT.lastIndex = 0;
+  const body = String(markdown ?? "").replace(NOTES_COMMENT, (_, notes) => {
+    const text = String(notes).trim();
+    if (text) chunks.push(text);
+    return "";
+  });
+  return { body, notes: chunks.join("\n\n") };
+}
+
+// Markdown reads a `---` line right under text as a heading underline. In a note it
+// is meant as a divider, so it gets the blank line that makes it a rule.
+function notesMarkdown(notes) {
+  return String(notes).replace(/([^\n])\n([ \t]*-{3,}[ \t]*)(?=\n|$)/g, "$1\n\n$2");
+}
+
 function splitSlides(markdown) {
   // A separator must occupy its own line. Frontmatter is removed before splitting.
-  return markdown
+  // Notes comments are masked first so a `---` line inside speaker notes stays in the note.
+  const held = [];
+  NOTES_COMMENT.lastIndex = 0;
+  const masked = String(markdown).replace(NOTES_COMMENT, (match) => {
+    held.push(match);
+    return `\u0000NOTES${held.length - 1}\u0000`;
+  });
+  return masked
     .replace(/\r\n/g, "\n")
     .split(/^\s*---\s*$/m)
-    .map((slide) => slide.trim())
+    .map((slide) => slide.replace(/\u0000NOTES(\d+)\u0000/g, (_, index) => held[Number(index)]).trim())
     .filter(Boolean);
 }
 
+const CALLOUT_LABELS = [
+  ["tip", ["Tip", "Dica"]],
+  ["reminder", ["Reminder", "Lembrete"]],
+  ["learn-more", ["Learn more", "Saiba mais"]],
+  ["next", ["Next", "A seguir", "Próximo"]],
+  ["cta", ["CTA"]],
+  ["remember", ["Remember", "Lembre-se"]]
+];
+const CALLOUT_KEY = new Map(
+  CALLOUT_LABELS.flatMap(([key, labels]) => labels.map((label) => [label.toLowerCase(), key]))
+);
+const CALLOUT_RE = new RegExp(
+  `<blockquote>\\s*<p>\\s*<strong>(${CALLOUT_LABELS
+    .flatMap(([, labels]) => labels)
+    .sort((a, b) => b.length - a.length)
+    .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|")}):?<\\/strong>:?\\s*`,
+  "gi"
+);
+
 function renderMarkdown(markdown) {
   const raw = marked.parse(markdown);
-  return sanitizeHtml(raw, {
+  const clean = sanitizeHtml(raw, {
     allowedTags: ALLOWED_TAGS,
     allowedAttributes: ALLOWED_ATTRIBUTES,
     allowedSchemes: ["http", "https", "mailto", "data"],
@@ -46,13 +104,28 @@ function renderMarkdown(markdown) {
       a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" })
     }
   });
+  return markCallouts(clean);
+}
+
+function markCallouts(html) {
+  return String(html).replace(CALLOUT_RE, (match, label) => {
+    const key = CALLOUT_KEY.get(String(label).toLowerCase());
+    if (!key) return match;
+    return `<blockquote class="callout" data-callout="${key}"><p><span class="callout-label">${label}</span> `;
+  });
 }
 
 async function normalizedSlide(markdown, index, root, fromDir, source, templates) {
   const parsed = matter(markdown);
   const typed = readPageType(parsed.content, index + 1);
   const resolved = resolveSlideTemplate(parsed.data.template, typed.body, index + 1, templates);
-  const content = resolved.body.trim();
+  let extracted;
+  try {
+    extracted = extractNotes(resolved.body, parsed.data.notes);
+  } catch (error) {
+    throw new Error(`Slide ${index + 1} (${source}): ${error.message}`);
+  }
+  const content = extracted.body.trim();
   return {
     index,
     source,
@@ -61,6 +134,8 @@ async function normalizedSlide(markdown, index, root, fromDir, source, templates
     templateExplicit: resolved.explicit,
     type: pageTypeFromFilename(source) ?? typed.type,
     markdown: content,
+    notes: extracted.notes,
+    notesHtml: extracted.notes ? await rewriteAttachmentHtml(renderMarkdown(notesMarkdown(extracted.notes)), root, fromDir) : "",
     html: await rewriteAttachmentHtml(renderMarkdown(content), root, fromDir)
   };
 }
@@ -87,8 +162,10 @@ export async function loadSingleFile(filePath) {
     root,
     sourcePath: absolutePath,
     templates,
-    slides: await Promise.all(chunks.map((chunk, index) => normalizedSlide(chunk, index, root, root, `slide ${index + 1}`, templates)))
+    slides: []
   };
+  await applyDeckGroup(deck, parsed.data);
+  deck.slides = await Promise.all(chunks.map((chunk, index) => normalizedSlide(chunk, index, root, root, `slide ${index + 1}`, deck.templates)));
   return applyBlueprint(deck);
 }
 
@@ -105,7 +182,16 @@ export async function loadDirectoryProject(projectPath) {
     throw new Error(`${manifestPath} must define a non-empty "slides" list.`);
   }
 
-  const templates = await loadDeckTemplates(root);
+  const deck = {
+    title: String(manifest.title ?? path.basename(root)),
+    theme: String(manifest.theme ?? "midnight"),
+    themeCss: await loadThemeCss(root),
+    root,
+    sourcePath: root,
+    templates: await loadDeckTemplates(root),
+    slides: []
+  };
+  await applyDeckGroup(deck, manifest);
   const slides = [];
   for (const [index, item] of manifest.slides.entries()) {
     const relative = typeof item === "string" ? item : item?.file;
@@ -126,18 +212,27 @@ export async function loadDirectoryProject(projectPath) {
     }
     const markdown = await fs.readFile(real, "utf8");
     const sourceLabel = relative.split(path.sep).join("/");
-    slides.push(await normalizedSlide(markdown, index, root, path.dirname(real), sourceLabel, templates));
+    slides.push(await normalizedSlide(markdown, index, root, path.dirname(real), sourceLabel, deck.templates));
   }
 
-  return applyBlueprint({
-    title: String(manifest.title ?? path.basename(root)),
-    theme: String(manifest.theme ?? "midnight"),
-    themeCss: await loadThemeCss(root),
-    root,
-    sourcePath: root,
-    templates,
-    slides
-  });
+  deck.slides = slides;
+  return applyBlueprint(deck);
+}
+
+async function applyDeckGroup(deck, meta) {
+  const groupName = meta?.group == null ? "" : String(meta.group).trim();
+  const group = groupName ? await loadGroup(groupName) : null;
+  if (group) {
+    deck.templates = { ...group.templates, ...deck.templates };
+    deck.groupBlueprint = group.blueprint;
+    deck.group = group.name;
+  }
+  const style = String(meta?.style ?? group?.style ?? "").trim();
+  if (style) deck.style = style;
+  if (!deck.themeCss && style) deck.themeCss = await loadNamedTheme(style);
+  if ((meta?.theme == null || String(meta.theme).trim() === "") && group?.canvas) deck.theme = group.canvas;
+  const chrome = parseChrome(mergeChrome(group?.chromeSource ?? null, meta?.chrome ?? null));
+  if (chrome) deck.chrome = chrome;
 }
 
 export async function discoverPresentation(inputPath = ".") {
@@ -147,9 +242,9 @@ export async function discoverPresentation(inputPath = ".") {
   });
 
   if (stat.isFile()) {
-    if (path.basename(absolute).endsWith(".slide.md")) return loadSingleFile(absolute);
+    if (path.basename(absolute).endsWith(".slide.md")) return finishDeck(await loadSingleFile(absolute));
     if (path.basename(absolute) === "presentation.yml") {
-      return loadDirectoryProject(path.dirname(absolute));
+      return finishDeck(await loadDirectoryProject(path.dirname(absolute)));
     }
     throw new Error(`Unsupported file: ${absolute}. Use a .slide.md file or a directory project.`);
   }
@@ -163,7 +258,7 @@ export async function discoverPresentation(inputPath = ".") {
     // No manifest: try the single-file convention below.
   }
   if (await fs.stat(manifest).then(() => true).catch(() => false)) {
-    return loadDirectoryProject(absolute);
+    return finishDeck(await loadDirectoryProject(absolute));
   }
 
   const entries = await fs.readdir(absolute, { withFileTypes: true });
@@ -174,5 +269,10 @@ export async function discoverPresentation(inputPath = ".") {
   if (!candidate) {
     throw new Error(`No presentation found in ${absolute}. Add a *.slide.md file or presentation.yml.`);
   }
-  return loadSingleFile(path.join(absolute, candidate));
+  return finishDeck(await loadSingleFile(path.join(absolute, candidate)));
+}
+
+async function finishDeck(deck) {
+  deck.playback = playbackFromConfiguration(await loadConfiguration(deck.root));
+  return deck;
 }

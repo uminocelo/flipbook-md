@@ -1,0 +1,33 @@
+/* H.E.R.B.I.E.: cream chassis, Fantastic Four blue, a small orange lamp. */
+:host {
+  --slide-bg: #f3efe4;
+  --slide-text: #1c2430;
+  --slide-muted: #3e4c5e;
+  --slide-accent: #1d4e89;
+  --slide-mint: #e85d04;
+  --slide-heading: #1c2430;
+  --slide-line: #d5cdb8;
+  --slide-code: #fffaf1;
+  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+  background:
+    radial-gradient(circle at 0% 100%, #e85d041c, transparent 38%),
+    radial-gradient(circle at 100% 0%, #1d4e8916, transparent 42%),
+    #f3efe4;
+}
+
+:host::after { content: none; }
+
+.eyebrow {
+  color: var(--slide-mint);
+  letter-spacing: .18em;
+}
+
+h1 { letter-spacing: -.04em; }
+
+p,
+li { color: var(--slide-muted); }
+
+blockquote,
+.callout {
+  color: var(--slide-text);
+}

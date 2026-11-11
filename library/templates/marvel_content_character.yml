@@ -1,0 +1,129 @@
+name: marvel_content_character
+description: TikTok character post. Cover, table of contents, then short topics, medium topics, a media page, a quote, or a callout.
+style: marvel-ultron
+canvas: midnight
+themes:
+  - marvel-ultron
+  - marvel-jarvis
+  - marvel-herbie
+  - marvel-sentinel
+chrome:
+  counter:
+    corner: bottom-right
+    line: dashed
+    line_align: middle
+    line_length: 100%
+    ornament: "◈"
+  header:
+    kind: line
+    line: straight
+  footer:
+    kind: shapes
+    shape: hexagram
+templates:
+  marvel_content_character_cover:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: center
+    role: cover
+    layout: poster
+  marvel_content_character_toc:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: toc
+    layout: list
+  marvel_content_character_topics_short:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: topics
+    layout: topics
+    density: short
+  marvel_content_character_topics_medium:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: topics
+    layout: topics
+    density: medium
+  marvel_content_character_media:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: media
+    layout: media
+  marvel_content_character_quote:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: center
+    role: quote
+    layout: quote
+  marvel_content_character_callout:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: callout
+    layout: callout
+blueprint:
+  pages:
+    - type: cover
+    - type: toc
+    - any: [topics-short, topics-medium, media, quote, callout]
+      repeat:
+        min: 0
+        max: 24
+  types:
+    cover:
+      template: marvel_content_character_cover
+      allow: [heading, paragraph, image]
+      require: [heading, image]
+      max_chars: 220
+    toc:
+      template: marvel_content_character_toc
+      allow: [heading, paragraph, list]
+      require: [heading, list]
+      max_items: 8
+      max_chars: 360
+    topics-short:
+      template: marvel_content_character_topics_short
+      allow: [heading, paragraph, list, blockquote]
+      require: [heading, list]
+      max_items: 3
+      max_chars: 640
+    topics-medium:
+      template: marvel_content_character_topics_medium
+      allow: [heading, paragraph, list, blockquote]
+      require: [heading, list]
+      max_items: 5
+      max_chars: 520
+    media:
+      template: marvel_content_character_media
+      allow: [heading, paragraph, list, image, blockquote]
+      require: [heading, image]
+      max_items: 2
+      max_chars: 320
+    quote:
+      template: marvel_content_character_quote
+      allow: [heading, paragraph, blockquote]
+      require: [blockquote]
+      max_chars: 320
+    callout:
+      template: marvel_content_character_callout
+      allow: [heading, paragraph, blockquote]
+      require: [blockquote]
+      max_chars: 280

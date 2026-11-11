@@ -1,0 +1,43 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
+
+/* Sentinel: purple armor, magenta sensor, a faint scan hatch. */
+:host {
+  --slide-bg: #07060d;
+  --slide-text: #f6f1f8;
+  --slide-muted: #c3b4d0;
+  --slide-accent: #d43b78;
+  --slide-mint: #b9a2ff;
+  --slide-heading: #f6f1f8;
+  --slide-line: #312c51;
+  --slide-code: #100e18;
+  font-family: "Roboto", sans-serif;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 12px, #312c5133 12px 13px),
+    linear-gradient(180deg, #d43b7814, transparent 18%),
+    #07060d;
+}
+
+:host::after { content: none; }
+
+.eyebrow {
+  color: var(--slide-mint);
+  letter-spacing: .08em;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: 1.12em;
+  letter-spacing: -0.02em;
+}
+
+p,
+li {
+  font-size: 1.2em;
+}
+
+blockquote,
+.callout {
+  color: var(--slide-text);
+}
+
+.page-counter-mark { color: var(--slide-mint); }

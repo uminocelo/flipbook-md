@@ -4,7 +4,7 @@
 
 **Markdown in. Slides out.**
 
-Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser. The same source can be exported as numbered PNG images for a multi-image post on Instagram, X, LinkedIn, YouTube, or TikTok.
+Flipbook MD is a local command-line tool. Point it at a Markdown presentation and it serves a slide player in your browser, with a separate announcer view for speaker notes. The same source can be exported as numbered PNG images for a multi-image post on Instagram, X, LinkedIn, YouTube, or TikTok, or as one MP4.
 
 ![Flipbook player showing the database indexes example](docs/screenshots/player.png)
 
@@ -21,11 +21,13 @@ flipbook show .
 
 `flipbook show` serves a presentation in the current directory. [Write a presentation](#write-a-presentation) describes the file format. Flipbook prints a `http://127.0.0.1` URL and tries to open it in your default browser. If it cannot, open the printed URL yourself. Press Ctrl+C to stop the server.
 
-Exporting PNG images needs Chromium, installed once:
+Exporting slides needs Chromium, installed once:
 
 ```sh
 npx playwright install chromium
 ```
+
+Video export also needs [ffmpeg](https://ffmpeg.org/) on your `PATH`.
 
 ## Quick start from a checkout
 
@@ -55,10 +57,10 @@ node bin/flipbook.js show .
 
 | Command | What it does |
 | --- | --- |
-| `flipbook show [path]` | Serves the presentation on `127.0.0.1` and opens it in a browser. |
+| `flipbook show [path]` | Serves the presentation on `127.0.0.1`, prints the announcer URL, and opens the deck in a browser. |
 | `flipbook check [path]` | Checks an optional `blueprint.yml`. Exits 0 when that file is absent or the deck passes. Exits 1 when a rule fails. |
 | `flipbook template add <name> --column <n> --row <n> --width <n> --height <n> --align start\|center\|end` | Saves one grid placement into the deck and into `~/Documents/flipbook/templates/`. |
-| `flipbook export [path]` | Writes one PNG per slide. |
+| `flipbook export [path]` | Writes one PNG per slide, or an MP4 when the format is `video`. |
 | `flipbook --help` | Prints usage. |
 
 Omit `path` to use the current directory. `show`, `check`, and `export` accept:
@@ -160,6 +162,78 @@ flipbook template add quote --column 1 --row 2 --width 2 --height 1 --align star
 ```
 
 Run that command in the deck directory. It writes the `quote` key into `templates.yml` and saves the same fields as `~/Documents/flipbook/templates/quote.yml`. `show` and `export` read the deck file. They do not read the home folder. A slide then uses `<!-- template: quote -->`.
+
+A template name may also include `_`. Names such as `marvel_content_character_cover` are valid. `flow`, `cover`, and `summary` stay reserved.
+
+### Template groups
+
+A group is a saved kit: slide templates, a blueprint, page chrome, and a list of themes. Set `group` in `presentation.yml` or in a single-file frontmatter. Flipbook reads `~/Documents/flipbook/templates/<group>.yml` and, if that file is missing, the built-in copy.
+
+```yaml
+title: "Iron Fist"
+group: marvel_content_character
+style: marvel-jarvis
+theme: midnight
+slides:
+  - slides/01_cover.slide.md
+  - slides/02_toc.slide.md
+```
+
+`style` loads `~/Documents/flipbook/themes/<style>.css` when the deck has no `presentation.css`. `theme` is still the export backdrop (`midnight`, `light`, `paper`, or `forest`). A deck `templates.yml` or `blueprint.yml` replaces the group entries it defines.
+
+The built-in Marvel kits are `marvel_content_character`, `marvel_content_guide`, `marvel_content_place`, and `marvel_content_item`. Each one uses the same four themes: `marvel-ultron`, `marvel-jarvis`, `marvel-herbie`, and `marvel-sentinel`.
+
+| Group | Pages |
+| --- | --- |
+| `marvel_content_character` | Cover with a title and image, a table of contents, then any mix of short topics (3), medium topics (5), a media page, a quote, and a callout. |
+| `marvel_content_guide` | Cover with a title and image, then timeline pages of at most 5 stops. |
+| `marvel_content_place` | Cover, table of contents, then one content page per place. |
+| `marvel_content_item` | Cover, table of contents, then one content page per item. |
+
+Directory slides take their page type from the filename suffix: `slides/03_topics-short.slide.md` is type `topics-short`. A single-file deck sets `<!-- type: topics-short -->` on each slide.
+
+A media page has a frame for one image or GIF. Once that image is on the page, the page holds at most 2 topics. A quote page is a blockquote. A callout page uses one of these labels, and the same labels also work inside a content page. The label on the slide is the word in the deck, so a Portuguese deck uses the Portuguese word.
+
+| English | Portuguese |
+| --- | --- |
+| `Tip` | `Dica` |
+| `Reminder` | `Lembrete` |
+| `Learn more` | `Saiba mais` |
+| `Next` | `A seguir` or `Próximo` |
+| `CTA` | `CTA` |
+| `Remember` | `Lembre-se` |
+
+```markdown
+> **Dica:** Comece pela edição de origem.
+
+> **Lembrete:** Com um GIF na página, no máximo 2 tópicos.
+
+> **Saiba mais:** Nomeie o próximo quadrinho, episódio ou jogo.
+
+> **Lembre-se:** A centelha é um propósito, não só sobreviver.
+```
+
+Every group draws the same kind of chrome, with its own corner, line, and shapes. The cover does not show a page counter. Later pages number from 01. The counter sits in one corner for the whole deck. Its line is `solid`, `dashed`, or `dotted`, aligned to the `top`, `middle`, or `bottom` of the number, and its length is `100%` or a shorter value such as `46%`. `ornament` is a short glyph or a small image or GIF at the opposite end of the line, drawn at the same height as the number.
+
+A header and a footer are each a line (`straight`, `dashed`, or `dotted`) or a row of shapes: `circle`, `triangle`, `square`, `pentagram`, `hexagram`, `heptagram`, `octagram`, or `nonagram`.
+
+Override the group chrome in the deck:
+
+```yaml
+chrome:
+  counter:
+    corner: top-left
+    line: dotted
+    line_align: top
+    line_length: 100%
+    ornament: assets/mark.gif
+  header:
+    kind: shapes
+    shape: circle
+  footer:
+    kind: line
+    line: dashed
+```
 
 ### Blueprint
 
@@ -281,23 +355,71 @@ Place `presentation.css` next to `presentation.yml`, or in the same directory as
 
 A solid background can hide the default ring with `:host::after { content: none; }`. Local fonts and images referenced with relative `url()` are read from the presentation directory (`.woff2`, `.png`, `.svg`, and the other common font and image types).
 
-The previous button, next button, fullscreen button, and the keys ←, →, F, and Esc keep the player stylesheet. Esc leaves fullscreen.
+The previous, play, and next buttons, the fullscreen button, and the keys ←, →, Space, P, F, and Esc keep the player stylesheet. Esc leaves fullscreen.
 
 <img src="docs/screenshots/theme.png" alt="Database indexes slide with a paper presentation.css theme. The controls stay on the built-in player stylesheet." width="880">
 
 ## Present
 
-The server binds to `127.0.0.1` and lets the operating system choose a free port.
+The server binds to `127.0.0.1` and lets the operating system choose a free port. `flipbook show` prints two URLs and opens the deck. Open the announcer URL in a second tab when you are the speaker.
+
+| View | URL | What it shows |
+| --- | --- | --- |
+| Deck | `http://127.0.0.1:<port>/` | The slides for the room |
+| Announcer | `http://127.0.0.1:<port>/announcer` | The same slide, plus a notes panel |
+
+The two tabs stay on the same slide. Press Play in either tab and the other follows. Playback stops on the last slide. It does not loop. The tab where you pressed Play owns the timer, so the slides advance once. Previous, next, Home, and End in either tab move both views. The top bar link opens the other view in a new tab, so the one you are presenting stays put.
 
 | Key | Action |
 | --- | --- |
 | → or Space | Next slide |
 | ← | Previous slide |
+| P | Play or pause |
 | Home / End | First or last slide |
 | F | Toggle fullscreen |
 | Esc | Leave fullscreen |
 
-The on-screen buttons perform the same navigation.
+The on-screen buttons perform the same navigation. Play is disabled on the last slide until you move back.
+
+How long Play holds each slide comes from `presentation.interval` in `configuration.yml`. The default is 5 seconds. That interval is separate from a video export's duration.
+
+### Transitions
+
+By default a slide change is instant. Set `presentation.transition` in `configuration.yml` to `fade` or `slide` and the new slide animates in, in the deck and in the announcer view. With `slide`, the new slide comes in from the right when you move forward and from the left when you move back. `presentation.transition_duration` is the length in seconds, greater than 0 and at most 5. The default is 0.4.
+
+```yaml
+presentation:
+  transition: fade
+  transition_duration: 0.4
+```
+
+The player skips the animation when the system asks for reduced motion.
+
+### Speaker notes
+
+Notes are not drawn on the audience slide. They show in the announcer panel. A slide with no notes says "No notes for this slide."
+
+In a directory slide, put them in frontmatter:
+
+```markdown
+---
+notes: |
+  Point at the diagram, then go on.
+---
+
+# Diagram
+```
+
+In any slide, a comment works too. This is the form to use in a single `.slide.md` file:
+
+```markdown
+<!-- notes:
+Point at the diagram.
+Name the tradeoff before the next slide.
+-->
+```
+
+A slide can use both. The frontmatter note comes first. A line that is only `---` inside a notes comment stays in the note. It does not start a new slide, and it shows as a divider, not as a heading for the line above it. Notes are Markdown, and Flipbook sanitizes them the same way it sanitizes a slide.
 
 ## Export carousel images
 
@@ -339,7 +461,7 @@ flipbook export . --format carousel --preset instagram --output dist/instagram
 
 Export warns when a slide's content does not fit the image and is cut off, and names the slide. Shorten that slide or choose a taller preset.
 
-`--format` accepts `carousel`. The default preset is `instagram`, and the default output directory is `dist/carousel`.
+`--format` accepts `carousel` or `video`. The default format is `carousel`, the default preset is `instagram`, and the default output directory is `dist/carousel` for images or `dist/video` for an MP4.
 
 Each file is named in slide order, for example `01-hello-world.png`. The folder also contains `README.txt`. Upload the images in numeric order, and check the platform’s current size and cropping rules before posting. Export leaves the source Markdown unchanged.
 
@@ -352,6 +474,43 @@ These two frames are exported from `examples/database-indexes-project`.
   <img src="docs/screenshots/export-x.png" alt="X export, 1080 by 1080, comparison slide" width="280">
 </p>
 
+## Export a video
+
+`--format video` writes one MP4. Flipbook renders the same frames as the carousel export, then uses ffmpeg to hold each slide for an equal share of `--duration`. Duration is the length of the whole video, in seconds, greater than 0 and at most 1800. The default frame rate is 30. `--fps` accepts an integer from 1 to 60. Every slide needs at least one frame, so export stops when the duration is too short for the slide count.
+
+```sh
+flipbook export . --format video --duration 60 --preset instagram
+```
+
+Install ffmpeg and keep it on `PATH`. Chromium is still required, because each frame is a rendered slide. The file is H.264 video in an MP4. The default output is `dist/video/<title>.mp4`. Flipbook writes the export details next to it in `<title>.mp4.txt`. `--output` can be a directory or a path that ends in `.mp4`. A relative output path is resolved from the directory where you ran the command.
+
+`--transition fade` cross-fades from each slide to the next, and `--transition slide` pushes the next slide in from the right. `--transition-duration` is the length of each transition in seconds, greater than 0 and at most 5, with a default of 0.4. The video keeps the length you set in `--duration`. Export stops when the transitions do not fit that length.
+
+```sh
+flipbook export . --format video --duration 60 --transition fade --transition-duration 0.5
+```
+
+The same settings can live in `configuration.yml` at the deck root. Command-line flags override the file. A flag you leave out does not replace what the file says. An absent `configuration.yml` is not an error. A file that is not valid YAML, or a symlink that resolves outside the deck, stops `show`, `check`, and `export`.
+
+```yaml
+export:
+  format: video
+  duration: 60
+  preset: instagram
+  fps: 30
+  output: dist/video
+  transition: fade
+  transition_duration: 0.5
+presentation:
+  interval: 5
+  transition: fade
+  transition_duration: 0.4
+```
+
+`presentation.interval` is the Play button's hold for each slide, in seconds. It does not change the video. The default is 5. The value must be greater than 0 and at most 600.
+
+`flipbook export .` with that file writes the video. `flipbook export . --duration 30` keeps the file's preset and uses 30 seconds. A top-level `format`, `duration`, `preset`, `fps`, or `output` is used only when `export` does not set that field. A top-level `transition` or `transition_duration` sets both the player and the video, unless `presentation` or `export` sets its own.
+
 ## Development
 
 ```sh
@@ -363,7 +522,7 @@ Tests use the Node.js test runner (`node --test`).
 
 ```text
 bin/        CLI entry point
-src/        discovery, Markdown rendering, HTTP server, image export
+src/        discovery, Markdown rendering, HTTP server, image and video export
 public/     browser player
 examples/   sample presentations
 docs/       README screenshots
@@ -378,7 +537,7 @@ Flipbook is for local authoring. The server listens on loopback only. Rendered M
 
 ## Status
 
-Version 0.1.0 includes presentation discovery, Markdown slides, a browser player, optional `presentation.css` themes, slide templates, optional `blueprint.yml` checks, carousel PNG export, and tests.
+Version 0.1.0 includes presentation discovery, Markdown slides, a browser player with autoplay, an announcer view for speaker notes, optional `presentation.css` themes, slide templates, optional `blueprint.yml` checks, carousel PNG export, MP4 export, and tests.
 
 This version does not include live reload, a visual editor, PowerPoint export, collaboration, or support for every Markdown extension.
 

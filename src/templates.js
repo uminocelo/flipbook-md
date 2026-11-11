@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 // Placements are CSS grid lines on a 3×3 grid. `flow` has no area.
@@ -13,8 +14,11 @@ export const TEMPLATES = {
 };
 
 const TEMPLATE_COMMENT = /<!--\s*template:\s*([^>]*?)\s*-->/gi;
-const TEMPLATE_NAME = /^[a-z][a-z0-9-]*$/;
+const TEMPLATE_NAME = /^[a-z][a-z0-9_-]*$/;
 const ALIGNS = new Set(["start", "center", "end"]);
+const ROLES = new Set(["cover", "toc", "topics", "media", "quote", "callout", "timeline", "content"]);
+const LAYOUTS = new Set(["poster", "list", "topics", "media", "quote", "callout", "timeline", "content"]);
+const DENSITIES = new Set(["short", "medium"]);
 
 export function lookupTemplate(name, extra = {}) {
   const key = String(name ?? "").trim().toLowerCase();
@@ -46,6 +50,18 @@ export function flipbookHome() {
   return path.join(os.homedir(), "Documents", "flipbook");
 }
 
+export function libraryRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../library");
+}
+
+export function templateLibraryDirs() {
+  return [path.join(flipbookHome(), "templates"), path.join(libraryRoot(), "templates")];
+}
+
+export function themeLibraryDirs() {
+  return [path.join(flipbookHome(), "themes"), path.join(libraryRoot(), "themes")];
+}
+
 export function parsePlacement(name, value) {
   const key = String(name ?? "").trim().toLowerCase();
   if (!TEMPLATE_NAME.test(key) || TEMPLATES[key]) {
@@ -70,6 +86,9 @@ export function parsePlacement(name, value) {
     width,
     height,
     align,
+    role: optionalToken(value.role, ROLES, key, "role"),
+    layout: optionalToken(value.layout, LAYOUTS, key, "layout"),
+    density: optionalToken(value.density, DENSITIES, key, "density"),
     area: { column: lineSpan(column, width), row: lineSpan(row, height) }
   };
 }
@@ -149,6 +168,13 @@ function lineSpan(start, size) {
 function integerField(value, name, field) {
   if (!Number.isInteger(value)) throw new Error(`templates.yml template "${name}" has an invalid ${field}.`);
   return value;
+}
+
+function optionalToken(value, allowed, name, field) {
+  if (value == null || String(value).trim() === "") return null;
+  const text = String(value).trim().toLowerCase();
+  if (!allowed.has(text)) throw new Error(`templates.yml template "${name}" has an invalid ${field}.`);
+  return text;
 }
 
 function alignDeclarations(align) {

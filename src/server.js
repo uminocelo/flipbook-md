@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assetMime, resolveThemeAsset, rewriteThemeUrls } from "./theme.js";
-import { deckTemplateCss } from "./templates.js";
+import { bandHtml, counterHtml, counterNumbers, playerOrnament, surfaceCss } from "./chrome.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, "../public");
@@ -14,6 +14,12 @@ const MIME = {
   ".js": "text/javascript; charset=utf-8",
   ".svg": "image/svg+xml"
 };
+
+function playbackInterval(presentation) {
+  const value = Number(presentation.playback?.interval);
+  if (!Number.isFinite(value) || value <= 0 || value > 600) return 5;
+  return value;
+}
 
 function send(res, status, body, contentType = "text/plain; charset=utf-8", headers = {}) {
   res.writeHead(status, {
@@ -34,15 +40,49 @@ export async function startServer(presentation, { host = "127.0.0.1", port = 0 }
     }
 
     if (url.pathname === "/api/presentation") {
+      const numbers = counterNumbers(presentation.slides);
+      const ornament = playerOrnament(presentation.chrome?.counter?.ornament);
       return send(res, 200, JSON.stringify({
         title: presentation.title,
         theme: presentation.theme,
-        slides: presentation.slides
+        group: presentation.group ?? null,
+        style: presentation.style ?? null,
+        chromeHtml: presentation.chrome ? {
+          header: bandHtml(presentation.chrome.header, "header"),
+          footer: bandHtml(presentation.chrome.footer, "footer")
+        } : null,
+        playback: {
+          interval: playbackInterval(presentation),
+          transition: presentation.playback?.transition ?? { type: "none", duration: 0.4 }
+        },
+        slides: presentation.slides.map((slide, index) => ({
+          index: slide.index,
+          source: slide.source,
+          title: slide.title,
+          template: slide.template,
+          html: slide.html,
+          notesHtml: slide.notesHtml || "",
+          type: slide.type,
+          layout: slide.layout ?? null,
+          role: slide.role ?? null,
+          density: slide.density ?? null,
+          showCounter: Boolean(slide.showCounter),
+          counterHtml: numbers[index] ? counterHtml(presentation.chrome.counter, numbers[index], ornament) : ""
+        }))
       }), "application/json; charset=utf-8");
     }
 
+    if (url.pathname === "/announcer" || url.pathname === "/announcer/") {
+      try {
+        const body = await fs.readFile(path.join(publicDir, "announcer.html"));
+        return send(res, 200, body, MIME[".html"]);
+      } catch {
+        return send(res, 404, "Not found");
+      }
+    }
+
     if (url.pathname === "/templates.css") {
-      const css = deckTemplateCss(".slide-root", presentation.templates ?? {});
+      const css = surfaceCss(presentation, ".slide-root");
       return send(res, 200, css, "text/css; charset=utf-8", { "Cache-Control": "no-store" });
     }
 

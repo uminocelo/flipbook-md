@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 import { discoverPresentation } from "./presentation.js";
 import { addSavedTemplate } from "./templates.js";
 import { startServer } from "./server.js";
-import { exportCarousel } from "./export.js";
+import { exportCarousel, exportVideo } from "./export.js";
+import { loadConfiguration, resolveExportOptions } from "./configuration.js";
 
 function openBrowser(url) {
   const platform = process.platform;
@@ -25,9 +26,12 @@ export async function show(inputPath = ".") {
   console.log("");
   console.log(`  Flipbook MD — ${presentation.title}`);
   console.log(`  ${presentation.slides.length} slide(s)`);
-  if (presentation.themeCss) console.log("  Custom theme: presentation.css");
+  if (presentation.group) console.log(`  Group: ${presentation.group}`);
+  if (presentation.style) console.log(`  Theme: ${presentation.style}`);
+  else if (presentation.themeCss) console.log("  Custom theme: presentation.css");
   console.log("");
   console.log(`  Open: ${instance.url}`);
+  console.log(`  Announcer: ${instance.url}/announcer`);
   console.log("  Press Ctrl+C to stop the server.");
   console.log("");
   openBrowser(instance.url);
@@ -39,7 +43,7 @@ export async function check(inputPath = ".") {
   const presentation = await discoverPresentation(inputPath);
   console.log("");
   if (!presentation.blueprint) console.log("  Flipbook MD — no blueprint");
-  else console.log(`  Flipbook MD — ${presentation.slides.length} slide(s) match the blueprint`);
+  else console.log(`  Flipbook MD — ${presentation.slides.length} slide(s) match${presentation.group ? ` ${presentation.group}` : " the blueprint"}`);
   console.log("");
   return presentation;
 }
@@ -79,11 +83,21 @@ function flagValue(args, name) {
 
 export async function exportSlides(inputPath = ".", options = {}) {
   const presentation = await discoverPresentation(inputPath);
-  const result = await exportCarousel(presentation, options);
+  const resolved = resolveExportOptions(await loadConfiguration(presentation.root), options);
+  const result = resolved.format === "video"
+    ? await exportVideo(presentation, resolved)
+    : await exportCarousel(presentation, { preset: resolved.preset, outputDir: resolved.outputDir });
   console.log("");
-  console.log(`  Flipbook MD — exported ${result.count} slide image(s)`);
-  console.log(`  Format: ${result.preset} (${result.width} × ${result.height})`);
-  console.log(`  Output: ${result.outputDir}`);
+  if (result.format === "video") {
+    console.log(`  Flipbook MD — exported a ${result.duration}s video`);
+    console.log(`  Format: ${result.preset} (${result.width} × ${result.height}), ${result.fps} fps`);
+    if (result.transition !== "none") console.log(`  Transition: ${result.transition}, ${result.transitionDuration}s`);
+    console.log(`  Output: ${result.outputFile}`);
+  } else {
+    console.log(`  Flipbook MD — exported ${result.count} slide image(s)`);
+    console.log(`  Format: ${result.preset} (${result.width} × ${result.height})`);
+    console.log(`  Output: ${result.outputDir}`);
+  }
   if (result.clipped?.length) {
     console.log(`  Warning: slide(s) ${result.clipped.join(", ")} do not fit the ${result.preset} image and are cut off. Shorten them or pick a taller preset.`);
   }

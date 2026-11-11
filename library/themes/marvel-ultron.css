@@ -1,0 +1,33 @@
+/* Ultron: black chassis, crimson optic, amber warning marks. */
+:host {
+  --slide-bg: #07080b;
+  --slide-text: #f4f1ea;
+  --slide-muted: #b7b1a8;
+  --slide-accent: #e10600;
+  --slide-mint: #ffb000;
+  --slide-heading: #f4f1ea;
+  --slide-line: #2c313a;
+  --slide-code: #101217;
+  font-family: "Avenir Next Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  background:
+    linear-gradient(180deg, #e1060018, transparent 16%),
+    repeating-linear-gradient(90deg, transparent 0 47px, #e1060012 47px 48px),
+    repeating-linear-gradient(0deg, transparent 0 47px, #8d97a814 47px 48px),
+    #07080b;
+}
+
+:host::after { content: none; }
+
+.eyebrow {
+  color: var(--slide-mint);
+  letter-spacing: .28em;
+}
+
+h1 { letter-spacing: -.045em; }
+
+blockquote,
+.callout {
+  color: var(--slide-text);
+}
+
+.page-counter-mark { color: var(--slide-mint); }

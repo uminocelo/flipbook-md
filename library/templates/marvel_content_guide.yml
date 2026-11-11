@@ -1,0 +1,58 @@
+name: marvel_content_guide
+description: TikTok reading guide. Cover, then timeline pages with at most five stops each.
+style: marvel-jarvis
+canvas: midnight
+themes:
+  - marvel-ultron
+  - marvel-jarvis
+  - marvel-herbie
+  - marvel-sentinel
+chrome:
+  counter:
+    corner: bottom-left
+    line: solid
+    line_align: bottom
+    line_length: 68%
+    ornament: "⌬"
+  header:
+    kind: line
+    line: dotted
+  footer:
+    kind: shapes
+    shape: circle
+templates:
+  marvel_content_guide_cover:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: center
+    role: cover
+    layout: poster
+  marvel_content_guide_timeline:
+    column: 1
+    row: 1
+    width: 3
+    height: 3
+    align: start
+    role: timeline
+    layout: timeline
+blueprint:
+  pages:
+    - type: cover
+    - type: timeline
+      repeat:
+        min: 0
+        max: 12
+  types:
+    cover:
+      template: marvel_content_guide_cover
+      allow: [heading, paragraph, image]
+      require: [heading, image]
+      max_chars: 220
+    timeline:
+      template: marvel_content_guide_timeline
+      allow: [heading, paragraph, list, blockquote]
+      require: [heading, list]
+      max_items: 5
+      max_chars: 560
